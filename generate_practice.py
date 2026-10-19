@@ -6,11 +6,17 @@ Requires: reportlab
 import math
 import itertools
 import argparse
+from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
+
+
+def get_timestamp_filename():
+    return datetime.now().strftime("%Y-%m-%d-%H-%M-%S.pdf")
+
 
 OUT = "practice_2002_2003.pdf"
 PW, PH = letter
@@ -1354,11 +1360,13 @@ def generate_set(selected_questions, out_pdf, subtitle, out_key_pdf=None):
     print("wrote", out_pdf)
 
 
-def build():
+def build(out_pdf=None):
+    if out_pdf is None:
+        out_pdf = get_timestamp_filename()
     selected = [(2002, 4), (2002, 7), (2002, 9), (2003, 9), (2003, 12), (2003, 14)]
     generate_set(
         selected,
-        OUT,
+        out_pdf,
         "Selected problems from 2002 (#4, #7, #9) and 2003 (#9, #12, #14)",
     )
 
@@ -1374,17 +1382,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--out",
         default=None,
-        help="Output filename prefix (without .pdf), e.g. practice_set_2",
+        help="Output filename (e.g. filename.pdf). If omitted, defaults to timestamp YYYY-MM-DD-HH-MM-SS.pdf",
     )
     args = parser.parse_args()
+
+    if args.out:
+        out_pdf = args.out if args.out.endswith(".pdf") else f"{args.out}.pdf"
+    else:
+        out_pdf = get_timestamp_filename()
 
     if args.questions:
         selected = []
         for q in args.questions:
             parts = q.replace("#", "").split(":")
             selected.append((int(parts[0]), int(parts[1])))
-        prefix = args.out or "practice"
-        out_pdf = f"{prefix}.pdf"
         desc = ", ".join(f"{y} #{n}" for y, n in selected)
         generate_set(
             selected,
@@ -1392,4 +1403,4 @@ if __name__ == "__main__":
             f"Practice set for {desc}",
         )
     else:
-        build()
+        build(out_pdf)

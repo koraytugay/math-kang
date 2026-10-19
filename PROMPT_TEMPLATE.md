@@ -9,4 +9,4 @@ Settings:
 - New practice problems per original: 3
 - Difficulty: same as original
 - Include original problems: yes
-- Output filename prefix: practice_set_2
+- Output filename: timestamp (e.g. YYYY-MM-DD-HH-MM-SS.pdf)

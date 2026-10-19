@@ -35,8 +35,10 @@ When the user specifies questions (via `PROMPT_TEMPLATE.md` or directly in chat,
    - Visually inspect the image carefully (count every grid line, cube, shape, etc.) and solve the original problem.
    - Write a **brand-new dedicated method `q_<year>_<number>(d, key)`** (plus its own bespoke drawing and
      answer-checking helper functions) specifically for that question.
-3. Generate **a single PDF per practice set**:
-   - **Practice worksheet PDF** (e.g. `practice_set_2.pdf`) — contains the problems on the initial page(s), followed by the **Answer Key & Explanations on the final page(s)** (always starting on a fresh new page at the very end).
+3. Generate **a brand-new worksheet PDF for every request**:
+   - **Never amend or overwrite existing generated files.** Every time questions are requested, generate a completely new worksheet PDF.
+   - Name each generated PDF using the current timestamp in the format `YYYY-MM-DD-HH-MM-SS.pdf` (e.g. `2026-10-19-12-14-56.pdf`), unless the user explicitly requested a custom filename.
+   - The PDF contains the problems on the initial page(s), followed by the **Answer Key & Explanations on the final page(s)** (always starting on a fresh new page at the very end).
    - Do **NOT** generate a separate answer key file.
 
 ---
@@ -147,3 +149,5 @@ a new dedicated `q_<year>_<number>(d, key, set_num)` function for it!
    markings clearly and had to be bumped to `s=27`. Always inspect the rendered PNGs of your output PDF.
 4. **Answer key is ALWAYS on the last page of the PDF:** Never generate a separate answer key PDF file. Always
    append the answer key starting on a fresh new page at the very end of the worksheet PDF.
+5. **Always create a new timestamped file:** Never amend or overwrite previous worksheet PDFs. Every time questions are requested,
+   generate a fresh PDF named with the current timestamp `YYYY-MM-DD-HH-MM-SS.pdf`.
