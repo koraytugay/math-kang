@@ -3,6 +3,7 @@
 Usage:  python generate_practice.py   ->  writes practice_2002_2003.pdf (with answer key on the last page)
 Requires: reportlab
 """
+import os
 import math
 import itertools
 import argparse
@@ -13,12 +14,22 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 
+GEN_DIR = "generated"
+
 
 def get_timestamp_filename():
-    return datetime.now().strftime("%Y-%m-%d-%H-%M-%S.pdf")
+    os.makedirs(GEN_DIR, exist_ok=True)
+    return os.path.join(GEN_DIR, datetime.now().strftime("%Y-%m-%d-%H-%M-%S.pdf"))
 
 
-OUT = "practice_2002_2003.pdf"
+def ensure_gen_path(path):
+    os.makedirs(GEN_DIR, exist_ok=True)
+    if not os.path.dirname(path):
+        return os.path.join(GEN_DIR, path)
+    return path
+
+
+OUT = os.path.join(GEN_DIR, "practice_2002_2003.pdf")
 PW, PH = letter
 ML, MR, MT, MB = 54, 54, 60, 54
 TW = PW - ML - MR
@@ -32,6 +43,9 @@ BODY = ParagraphStyle("body", fontName="Helvetica", fontSize=11, leading=15)
 # ----------------------------------------------------------------- layout
 class Doc:
     def __init__(self, path):
+        dirname = os.path.dirname(path)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
         self.c = canvas.Canvas(path, pagesize=letter)
         self.page = 1
         self.y = PH - MT
@@ -1382,12 +1396,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--out",
         default=None,
-        help="Output filename (e.g. filename.pdf). If omitted, defaults to timestamp YYYY-MM-DD-HH-MM-SS.pdf",
+        help="Output filename or path (e.g. filename.pdf). If omitted, defaults to generated/YYYY-MM-DD-HH-MM-SS.pdf",
     )
     args = parser.parse_args()
 
     if args.out:
-        out_pdf = args.out if args.out.endswith(".pdf") else f"{args.out}.pdf"
+        fname = args.out if args.out.endswith(".pdf") else f"{args.out}.pdf"
+        out_pdf = ensure_gen_path(fname)
     else:
         out_pdf = get_timestamp_filename()
 
