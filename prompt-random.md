@@ -17,7 +17,8 @@ Generate a brand-new **20-question practice exam PDF** (with the Answer Key & Ex
    - Check `QUESTIONS_INDEX.md` and `generate_practice.py` for every selected `(year, number)` question.
    - For any question that does not yet have a dedicated `q_<year>_<num>` implementation in `generate_practice.py`:
      - Extract text and render high-DPI crops from `<year>.pdf` into your scratch directory and visually inspect the original question.
-     - Solve the original problem and write a dedicated custom implementation `q_<year>_<num>` with bespoke ReportLab figures and programmatic solver assertions (`assert` that only one choice `A`–`E` is valid).
+     - Solve the original problem and write a dedicated custom implementation `q_<year>_<num>` with bespoke ReportLab figures and **exact** programmatic solver assertions (`assert` that only one choice `A`–`E` is valid).
+     - **Never use weak proxy assertions** (such as checking only square counts instead of actual 2D geometric polyomino tiling). The solver must operate directly on the figure's geometric/combinatorial data structures and verify that the correct choice geometrically/logically works and no other choice works.
      - Update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md` with the newly implemented question(s).
 4. **Output Format & Verification:**
    - Save the generated exam PDF to `generated/YYYY-MM-DD-HH-MM-SS.pdf` using the current timestamp (never overwrite previous PDFs in `generated/`).

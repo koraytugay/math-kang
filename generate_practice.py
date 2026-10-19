@@ -276,7 +276,42 @@ def fig_tokens(tokens, sc, lw=1.3):
     return (x1 - x0) * sc, (y1 - y0) * sc, draw
 
 
-def skyline_problem(sky, pieces, sc):
+def _tok_match(t_sky, t_pc, is_end):
+    if t_sky[0] != t_pc[0]:
+        return False
+    kind = t_sky[0]
+    if kind == "A":
+        return t_sky[1] == t_pc[1]
+    if kind in ("H", "V"):
+        if not is_end:
+            return t_sky[1] == t_pc[1]
+        return (t_sky[1] > 0 and t_pc[1] > 0 and abs(t_pc[1]) <= abs(t_sky[1])) or (
+            t_sky[1] < 0 and t_pc[1] < 0 and abs(t_pc[1]) <= abs(t_sky[1])
+        )
+    if kind == "D":
+        if not is_end:
+            return t_sky[1] == t_pc[1] and t_sky[2] == t_pc[2]
+        return (
+            t_sky[1] * t_pc[2] == t_sky[2] * t_pc[1]
+            and (t_sky[1] > 0) == (t_pc[1] > 0)
+            and (t_sky[2] > 0) == (t_pc[2] > 0)
+            and abs(t_pc[1]) <= abs(t_sky[1])
+        )
+    return False
+
+
+def is_subpath_of_skyline(sky, pc):
+    m = len(pc)
+    for i in range(len(sky) - m + 1):
+        if all(_tok_match(sky[i + j], pc[j], j == 0 or j == m - 1) for j in range(m)):
+            return True
+    return False
+
+
+def skyline_problem(sky, pieces, sc, ans_idx=None):
+    if ans_idx is not None:
+        cannot_belong = [i for i, p in enumerate(pieces) if not is_subpath_of_skyline(sky, p)]
+        assert cannot_belong == [ans_idx], f"Skyline check failed: expected {[ans_idx]}, got {cannot_belong}"
     return vstack([fig_tokens(sky, sc), option_row([fig_tokens(p, sc) for p in pieces], gap=26)], gap=18)
 
 
@@ -955,7 +990,7 @@ def q_2002_7(d, key, set_num=2, include_orig=True):
     if include_orig:
         sky = [("A", 40), ("A", 40), ("H", 42), ("V", 40), ("H", 83), ("V", 42), ("D", 42, 43), ("D", 43, -43),
                ("V", -42), ("H", 83), ("V", -40), ("H", 42), ("D", 40, 40), ("D", 40, -40), ("V", 80), ("A", 40),
-               ("A", 40), ("V", -80), ("H", 40), ("V", 40), ("H", 45), ("V", 85), ("H", 15), ("V", -85), ("H", 65),
+               ("A", 40), ("V", -80), ("H", 40), ("V", 40), ("H", 45), ("V", 85), ("H", 15), ("V", -85), ("H", 40),
                ("V", -40), ("H", 40)]
         pcs = [[("V", -30), ("H", 40), ("V", -40), ("H", 30)],
                [("D", 40, -40), ("V", 80), ("A", 40)],
@@ -963,7 +998,7 @@ def q_2002_7(d, key, set_num=2, include_orig=True):
                [("H", 40), ("V", -40), ("H", 42), ("D", 40, 40)],
                [("A", 40), ("A", 40), ("V", -50)]]
         d.problem("Original 2002 #7.", "Far away we see the skyline of a castle. Which of the pieces "
-                  "<b>cannot</b> belong to the skyline?", skyline_problem(sky, pcs, 0.36), "below")
+                  "<b>cannot</b> belong to the skyline?", skyline_problem(sky, pcs, 0.36, ans_idx=2), "below")
         key.append(("2002 #7", "C", "Wherever there are two arches, they sit right next to each other. There is never a U-shaped dip between two arches."))
 
     sky = [("H", 60), ("A", 35), ("A", 35), ("H", 40), ("V", 75), ("H", 30), ("D", 25, 35), ("D", 25, -35),
@@ -974,7 +1009,7 @@ def q_2002_7(d, key, set_num=2, include_orig=True):
            [("V", 40), ("H", 30), ("D", 25, 35)],
            [("H", 25), ("V", 110), ("H", 20), ("V", -110), ("H", 25)]]
     d.problem(f"Practice {set_num}.1", "Here is the skyline of a town. Which piece <b>cannot</b> belong to it?",
-              skyline_problem(sky, pcs, 0.48), "below")
+              skyline_problem(sky, pcs, 0.48, ans_idx=0), "below")
     key.append((f"{set_num}.1", "A", "In the skyline there is a flat part between the wall and the pointed roof. Piece A has the roof sitting straight on the wall."))
 
     sky = [("H", 50), ("V", 50), ("H", 25), ("V", -15), ("H", 20), ("V", 15), ("H", 25), ("V", -15), ("H", 20),
@@ -986,7 +1021,7 @@ def q_2002_7(d, key, set_num=2, include_orig=True):
            [("H", 25), ("V", -15), ("H", 20), ("V", 15), ("H", 25), ("V", -50), ("H", 20)],
            [("V", 50), ("H", 25), ("V", -15), ("H", 20), ("V", 15), ("H", 25), ("V", -50)]]
     d.problem(f"Practice {set_num}.2", "Here is the skyline of a castle. Which piece <b>cannot</b> belong to it?",
-              skyline_problem(sky, pcs, 0.42), "below")
+              skyline_problem(sky, pcs, 0.42, ans_idx=4), "below")
     key.append((f"{set_num}.2", "E", "The castle wall has TWO notches at the top. Piece E shows a whole tower top with only one notch."))
 
     sky = [("H", 50), ("A", 30), ("H", 25), ("V", 60), ("D", 25, 40), ("D", 25, -40), ("V", -60), ("H", 40),
@@ -997,7 +1032,7 @@ def q_2002_7(d, key, set_num=2, include_orig=True):
            [("A", 30), ("H", 25), ("V", -40)],
            [("V", -40), ("H", 40), ("A", 60)]]
     d.problem(f"Practice {set_num}.3", "Here is a skyline with a small arch, a tower and a dome. Which piece "
-              "<b>cannot</b> belong to it?", skyline_problem(sky, pcs, 0.45), "below")
+              "<b>cannot</b> belong to it?", skyline_problem(sky, pcs, 0.45, ans_idx=3), "below")
     key.append((f"{set_num}.3", "D", "After each arch the line goes flat and then UP. Piece D goes down after the arch."))
 
 
@@ -1058,7 +1093,10 @@ def q_2003_9(d, key, set_num=4, include_orig=True):
 
 def q_2003_12(d, key, set_num=5, include_orig=True):
     d.heading(f"Set {set_num} - Folding a house", "Based on 2003, Problem 12")
-    tip = ("<i>(The dark parts at the top of the picture are the roof. The shape in the middle is the floor.)</i>")
+    tip = (
+        "<i>(The dark parts at the top are the roof and the middle square is the floor; "
+        "fold the walls away from you so the drawings are on the outside of the house.)</i>"
+    )
     if include_orig:
         net = {"F": "door", "K": None, "L": None, "R": "dot"}
         opts = [("GL", None, "dot"), ("SL", "door", None), ("GL", "door", "dot"), ("SL", None, "dot"), ("GL", None, "door")]
@@ -1168,44 +1206,91 @@ def fig_polyomino_numbered(cells, num, s=11):
     return w, h, draw
 
 
-def check_cover_two_pieces(empty_size, piece_sizes, opts, correct_idx):
-    pair_sums = []
-    for pair_str in opts:
-        p1, p2 = [int(v) - 1 for v in pair_str.split("+")]
-        pair_sums.append(piece_sizes[p1] + piece_sizes[p2])
-    assert pair_sums[correct_idx] == empty_size, f"Expected {empty_size}, got {pair_sums[correct_idx]}"
-    matches = [i for i, s in enumerate(pair_sums) if s == empty_size]
-    assert matches == [correct_idx], f"Multiple matches: {matches}"
+def _poly_orientations(cells, allow_flip=False):
+    res = set()
+    cur = list(cells)
+    for _ in range(4):
+        mr = min(r for r, c in cur)
+        mc = min(c for r, c in cur)
+        res.add(tuple(sorted((r - mr, c - mc) for r, c in cur)))
+        if allow_flip:
+            flipped = [(r, -c) for r, c in cur]
+            mr_f = min(r for r, c in flipped)
+            mc_f = min(c for r, c in flipped)
+            res.add(tuple(sorted((r - mr_f, c - mc_f) for r, c in flipped)))
+        cur = [(c, -r) for r, c in cur]
+    return [set(o) for o in res]
+
+
+def can_tile_empty_with_two_pieces(empty_cells, p1_cells, p2_cells, allow_flip=False):
+    empty_set = set(empty_cells)
+    if len(p1_cells) + len(p2_cells) != len(empty_set):
+        return False
+    R = max(r for r, c in empty_set) + 1
+    C = max(c for r, c in empty_set) + 1
+    o1s = _poly_orientations(p1_cells, allow_flip=allow_flip)
+    o2s = _poly_orientations(p2_cells, allow_flip=allow_flip)
+    for o1 in o1s:
+        for dr1 in range(-R, R + 1):
+            for dc1 in range(-C, C + 1):
+                s1 = {(r + dr1, c + dc1) for r, c in o1}
+                if s1.issubset(empty_set):
+                    rem = empty_set - s1
+                    mr = min(r for r, c in rem)
+                    mc = min(c for r, c in rem)
+                    rem_norm = {(r - mr, c - mc) for r, c in rem}
+                    if any(rem_norm == o2 for o2 in o2s):
+                        return True
+    return False
+
+
+def check_cover_two_pieces(grid_matrix, pieces, opts, correct_idx):
+    empty_cells = [
+        (r, c)
+        for r in range(len(grid_matrix))
+        for c in range(len(grid_matrix[0]))
+        if grid_matrix[r][c] == 0
+    ]
+    rot_matches = []
+    sym_matches = []
+    for i, pair_str in enumerate(opts):
+        parts = pair_str.replace("and", "+").split("+")
+        p1, p2 = [int(v.strip()) - 1 for v in parts]
+        if can_tile_empty_with_two_pieces(empty_cells, pieces[p1], pieces[p2], allow_flip=False):
+            rot_matches.append(i)
+        if can_tile_empty_with_two_pieces(empty_cells, pieces[p1], pieces[p2], allow_flip=True):
+            sym_matches.append(i)
+    assert rot_matches == [correct_idx], (
+        f"2D tiling check (rotations) failed: expected {[correct_idx]}, got {rot_matches}"
+    )
+    assert sym_matches == [correct_idx], (
+        f"2D tiling check (with flips) failed: expected {[correct_idx]}, got {sym_matches}"
+    )
 
 
 def q_2003_18(d, key, set_num=6, include_orig=True):
     d.heading(f"Set {set_num} - Covering an empty shape with two pieces", "Based on 2003, Problem 18")
 
-    # Original 2003 #18: 7x7 grid with 15 empty cells.
-    # Pieces: 1 (9), 2 (10), 3 (7), 4 (8).
-    # Options: 1+3 (16), 2+4 (18), 2+3 (17), 1+4 (17), 3+4 (15) -> E
-    empty_0 = 15
-    pcs_sizes_0 = [9, 10, 7, 8]
+    # Original 2003 #18: 7x7 grid with 17 empty cells (staircase boundary matching 2003.pdf).
+    # Pieces: 1 (9 cells), 2 (9 cells), 3 (8 cells), 4 (9 cells).
+    # Only Piece 3 (8 cells) and Piece 4 (9 cells) tile the 17-cell empty shape -> E ("3 and 4").
     opts0 = ["1 and 3", "2 and 4", "2 and 3", "1 and 4", "3 and 4"]
-    check_cover_two_pieces(empty_0, pcs_sizes_0, ["1+3", "2+4", "2+3", "1+4", "3+4"], 4)
-
-    # 7x7 grid matrix: 1=black, 0=white (empty). Exactly 15 zeros.
     grid0_m = [
         [1, 1, 1, 1, 1, 1, 1],
         [1, 1, 0, 0, 0, 1, 1],
         [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1],
         [1, 0, 0, 1, 0, 0, 1],
-        [1, 0, 0, 1, 1, 0, 1],
         [1, 1, 1, 1, 1, 1, 1],
         [1, 1, 1, 1, 1, 1, 1],
     ]
-    assert sum(row.count(0) for row in grid0_m) == 15
+    assert sum(row.count(0) for row in grid0_m) == 17
 
-    # 4 pieces:
-    p1_cells = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
-    p2_cells = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (2, 0), (2, 1)]
-    p3_cells = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1)]
-    p4_cells = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    p1_cells = [(0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (1, 3), (2, 0), (2, 1), (2, 2)]
+    p2_cells = [(0, 1), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2), (3, 1), (3, 2)]
+    p3_cells = [(0, 1), (1, 0), (1, 1), (1, 2), (1, 3), (2, 0), (2, 1), (2, 2)]
+    p4_cells = [(0, 0), (0, 1), (1, 0), (1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3)]
+    check_cover_two_pieces(grid0_m, [p1_cells, p2_cells, p3_cells, p4_cells], opts0, 4)
 
     if include_orig:
         fig0 = hstack([
@@ -1230,14 +1315,14 @@ def q_2003_18(d, key, set_num=6, include_orig=True):
         key.append((
             "2003 #18",
             "E",
-            "Counting the white cells in the 7 × 7 grid gives 15 empty cells. "
-            "The pieces contain: Piece 1 = 9 squares, Piece 2 = 10 squares, Piece 3 = 7 squares, Piece 4 = 8 squares. "
-            "Only Piece 3 and Piece 4 together have 7 + 8 = 15 squares to cover the white area.",
+            "The white area has 17 empty squares. Rotating Piece 4 (9 squares) by 90° clockwise covers the left "
+            "and top-center part of the white shape, and rotating Piece 3 (8 squares) by 90° counter-clockwise fits "
+            "the remaining right part exactly.",
         ))
 
-    # Practice .1: 6x6 grid, 14 empty cells. Pieces: 1(6), 2(8), 3(9), 4(7). Answer: A (1 and 2, 6+8=14)
+    # Practice .1: 6x6 grid, 14 empty cells.
+    # Piece 1 (6 cells, stepped) + Piece 2 (8 cells, stepped) tile the 14-cell region -> A ("1 and 2")
     opts1 = ["1 and 2", "1 and 3", "2 and 4", "3 and 4", "2 and 3"]
-    check_cover_two_pieces(14, [6, 8, 9, 7], ["1+2", "1+3", "2+4", "3+4", "2+3"], 0)
     grid1_m = [
         [1, 1, 1, 1, 1, 1],
         [1, 0, 0, 0, 0, 1],
@@ -1247,10 +1332,12 @@ def q_2003_18(d, key, set_num=6, include_orig=True):
         [1, 1, 1, 1, 1, 1],
     ]
     assert sum(row.count(0) for row in grid1_m) == 14
-    p1_1 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]
-    p1_2 = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    p1_1 = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1)]
+    p1_2 = [(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
     p1_3 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
     p1_4 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1)]
+    check_cover_two_pieces(grid1_m, [p1_1, p1_2, p1_3, p1_4], opts1, 0)
+
     fig1 = hstack([
         fig_grid_black_white(grid1_m, s=12),
         hstack([
@@ -1273,13 +1360,13 @@ def q_2003_18(d, key, set_num=6, include_orig=True):
     key.append((
         f"{set_num}.1",
         "A",
-        "Counting the white cells gives 14 empty cells. The pieces have 6, 8, 9, and 7 squares. "
-        "Only Piece 1 and Piece 2 have 6 + 8 = 14 squares.",
+        "The white area has 14 squares. Placing Piece 1 (6 squares) at the top of the white region leaves "
+        "an 8-square stepped shape at the bottom that matches Piece 2 exactly.",
     ))
 
-    # Practice .2: 6x6 grid, 13 empty cells. Pieces: 1(5), 2(7), 3(8), 4(9). Answer: C (1 and 3, 5+8=13)
+    # Practice .2: 6x6 grid, 13 empty cells.
+    # Piece 1 (5 cells, P-pentomino) + Piece 3 (8 cells, stepped) tile the 13-cell region -> C ("1 and 3")
     opts2 = ["1 and 2", "2 and 3", "1 and 3", "2 and 4", "3 and 4"]
-    check_cover_two_pieces(13, [5, 7, 8, 9], ["1+2", "2+3", "1+3", "2+4", "3+4"], 2)
     grid2_m = [
         [1, 1, 1, 1, 1, 1],
         [1, 0, 0, 0, 1, 1],
@@ -1291,8 +1378,10 @@ def q_2003_18(d, key, set_num=6, include_orig=True):
     assert sum(row.count(0) for row in grid2_m) == 13
     p2_1 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)]
     p2_2 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1)]
-    p2_3 = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    p2_3 = [(0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (2, 1), (2, 2)]
     p2_4 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
+    check_cover_two_pieces(grid2_m, [p2_1, p2_2, p2_3, p2_4], opts2, 2)
+
     fig2 = hstack([
         fig_grid_black_white(grid2_m, s=12),
         hstack([
@@ -1315,25 +1404,27 @@ def q_2003_18(d, key, set_num=6, include_orig=True):
     key.append((
         f"{set_num}.2",
         "C",
-        "Counting the white cells gives 13 empty cells. The pieces have 5, 7, 8, and 9 squares. "
-        "Only Piece 1 and Piece 3 have 5 + 8 = 13 squares.",
+        "The white area has 13 squares. Placing Piece 1 (5 squares) in the top-left of the white region "
+        "leaves an 8-square stepped shape on the right and bottom that matches Piece 3 exactly.",
     ))
 
-    # Practice .3: 5x5 grid, 11 empty cells. Pieces: 1(4), 2(5), 3(6), 4(8). Answer: D (2 and 3, 5+6=11)
+    # Practice .3: 5x5 grid, 11 empty cells.
+    # Piece 2 (5 cells, P-pentomino) + Piece 3 (6 cells, 2x3 rectangle) tile the 11-cell region -> D ("2 and 3")
     opts3 = ["1 and 2", "1 and 4", "2 and 4", "2 and 3", "3 and 4"]
-    check_cover_two_pieces(11, [4, 5, 6, 8], ["1+2", "1+4", "2+4", "2+3", "3+4"], 3)
     grid3_m = [
         [1, 1, 1, 1, 1],
         [1, 0, 0, 0, 1],
         [1, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0],
-        [1, 1, 1, 1, 0],
+        [1, 0, 0, 0, 1],
+        [1, 1, 0, 0, 1],
     ]
     assert sum(row.count(0) for row in grid3_m) == 11
     p3_1 = [(0, 0), (0, 1), (1, 0), (1, 1)]
-    p3_2 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)]
+    p3_2 = [(0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
     p3_3 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]
     p3_4 = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    check_cover_two_pieces(grid3_m, [p3_1, p3_2, p3_3, p3_4], opts3, 3)
+
     fig3 = hstack([
         fig_grid_black_white(grid3_m, s=13),
         hstack([
@@ -1356,8 +1447,9 @@ def q_2003_18(d, key, set_num=6, include_orig=True):
     key.append((
         f"{set_num}.3",
         "D",
-        "Counting the white cells gives 11 empty cells. The pieces have 4, 5, 6, and 8 squares. "
-        "Only Piece 2 and Piece 3 have 5 + 6 = 11 squares.",
+        "The white area has 11 squares (a 3 × 3 block on top of 2 extra squares at the bottom-right). "
+        "Piece 3 (the 2 × 3 rectangle, 6 squares) covers the top two rows of the white shape, and Piece 2 "
+        "(5 squares) covers the remaining 3 + 2 squares at the bottom.",
     ))
 
 
@@ -3760,15 +3852,18 @@ def q_2002_24(d, key, set_num=1, include_orig=True, num_practice=3):
             "The first number after 1987 with four different digits is 2013 (digits 2, 0, 1, 3). "
             "That happens after 2013 - 1987 = 26 km.",
         ),
-        # Practice .4: Start = 476358. Next: 476359 (digits 4,7,6,3,5,9 all distinct!). Distance = 1 km (Answer: E)
+        # Practice .4: Start = 478659.
+        # 478660..478689 repeat 6, 7, or 8. Next distinct-digit number is 478690 (4,7,8,6,9,0).
+        # Distance = 478690 - 478659 = 31 km (Answer: E)
         (
-            476358,
-            ["12", "11", "9", "2", "1"],
+            478659,
+            ["1", "11", "21", "29", "31"],
             4,
-            "The odometer of a bus shows <b>476358</b>, where every digit is different. "
+            "The odometer of a bus shows <b>478659</b>, where every digit is different. "
             "After how many more kilometres will all six digits be different again?",
-            "Adding just 1 km gives 476359, whose digits (4, 7, 6, 3, 5, 9) are already all different! "
-            "So it happens after just 1 km.",
+            "From 478659, numbers 478660–478669 repeat 6, 478670–478679 repeat 7, and 478680–478689 repeat 8. "
+            "The next number is 478690, whose digits (4, 7, 8, 6, 9, 0) are all different! "
+            "That happens after 478690 - 478659 = 31 km.",
         ),
     ]
 

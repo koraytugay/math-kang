@@ -174,8 +174,10 @@ a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True, num_pract
 1. **Always reset canvas colors:** In ReportLab, setting `c.setFillColor(colors.white)` or light gray stays active until changed.
    Every custom `draw(c, x, y)` function **must** end with `c.setFillColor(colors.black)` and
    `c.setStrokeColor(colors.black)` or subsequent text and problem headers will be drawn in the wrong color or invisible!
-2. **Write a programmatic checker for every question:** Always write an `assert` / solver function that verifies
-   the math and geometry of your question and confirms only one answer choice is valid.
+2. **Write a true, exact programmatic checker for every question (NEVER use weak proxy checks):**
+   - Always write an `assert` / solver function that verifies the full math, combinatorics, and geometry of your question directly on the exact data structures passed to the figure renderer, and confirms that **strictly one** answer choice (`A`–`E`) is valid.
+   - **Never write a weak proxy checker!** For example, in a 2D polyomino tiling/covering problem (`2003 #18`, `2007 #8`), checking only that the number of squares sums to the empty area (`5 + 6 == 11`) is a broken proxy check because the 2D shapes might not geometrically fit the region! Your solver must test actual 2D geometric placement (all translations/rotations/flips) directly on the grid matrix and polyomino cell coordinates. Similarly, for skyline/path matching (`2002 #7`), verify subpath matching on the actual token lists; for 3D nets (`2003 #12`, `2007 #24`), verify the 3D/unfolded adjacency directly.
+3. **Avoid trivial degeneracies in practice variations:** When designing new numbers for a trick problem (e.g., odometer rollover `2002 #24`), make sure the variation preserves the core reasoning step of the original problem (e.g., requiring a digit rollover rather than a trivial `+1 km` step).
 3. **Check figure scale and layout visually:** Always render output PDF pages to PNGs in `scratch/` and inspect them with `view_file`.
 4. **Answer key is ALWAYS on the last page of the PDF:** Never generate a separate answer key PDF file. Always
    append the answer key starting on a fresh new page at the very end of the worksheet PDF.
