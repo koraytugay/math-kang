@@ -498,19 +498,8 @@ def write_answer_key(path, title, subtitle, key):
     print("wrote", path)
 
 
-def build():
-    d = Doc(OUT)
-    c = d.c
-    c.setFont("Helvetica-Bold", 20)
-    c.drawCentredString(PW / 2, PH - 70, "Math Kangaroo Practice - Grades 3-4")
-    c.setFont("Helvetica", 11)
-    c.drawCentredString(PW / 2, PH - 90, "Selected problems from 2002 (#4, #7, #9) and 2003 (#9, #12, #14)")
-    c.drawCentredString(PW / 2, PH - 105, "Each original problem is followed by three similar practice problems.")
-    d.y = PH - 130
-    key = []  # (label, answer letter, explanation)
-
-    # ---------------- Set 1 ------------------------------------------------
-    d.heading("Set 1 - Cutting a square into pieces", "Based on 2002, Problem 4")
+def q_2002_4(d, key, set_num=1):
+    d.heading(f"Set {set_num} - Cutting a square into pieces", "Based on 2002, Problem 4")
     orig = ["AABD", "ABBD", "CCBF", "EFFF"]
     opts = [[(0, 0)], [(0, 0), (0, 1)], [(0, 0), (0, 1), (1, 1)],
             [(0, 0), (0, 1), (0, 2), (1, 0), (1, 2)], [(0, 0), (1, 0), (2, 0), (2, 1)]]
@@ -521,26 +510,27 @@ def build():
     g = ["AAAB", "CDAB", "CDDD", "CEEF"]
     o = [[(0, 0)], [(0, 0), (0, 1), (0, 2), (1, 1)], [(0, 0), (0, 1), (0, 2)],
          [(0, 0), (1, 0), (2, 0), (0, 1)], [(0, 0), (1, 0)]]
-    d.problem("Practice 1.1", "The square was cut along the lines. Which of the shapes below was "
+    d.problem(f"Practice {set_num}.1", "The square was cut along the lines. Which of the shapes below was "
               "<b>not</b> obtained this way?", cut_problem(g, o, 1), "below")
-    key.append(("1.1", "B", "Pieces: two L-shapes of 4, a straight 3, two dominoes, one small square. No T-shape."))
+    key.append((f"{set_num}.1", "B", "Pieces: two L-shapes of 4, a straight 3, two dominoes, one small square. No T-shape."))
 
     g = ["AABBB", "ACCBE", "ACDDE", "FCDEE", "FFDGG"]
     o = [[(0, 0), (1, 0), (1, 1)], [(0, 0), (0, 1)], [(0, 1), (0, 2), (1, 0), (1, 1)],
          [(0, 1), (1, 0), (1, 1), (2, 1)], [(0, 0), (0, 1), (0, 2), (1, 2)]]
-    d.problem("Practice 1.2", "This square was cut along the lines. Which shape was <b>not</b> obtained?",
+    d.problem(f"Practice {set_num}.2", "This square was cut along the lines. Which shape was <b>not</b> obtained?",
               cut_problem(g, o, 2), "below")
-    key.append(("1.2", "C", "Pieces: four L-shapes of 4, one T, one L of 3, one domino. There is no zig-zag (S) piece."))
+    key.append((f"{set_num}.2", "C", "Pieces: four L-shapes of 4, one T, one L of 3, one domino. There is no zig-zag (S) piece."))
 
     g = ["AAABB", "ACCCB", "DDCEB", "DFFEE", "DFGGG"]
     o = [[(0, 1), (1, 0), (1, 1), (1, 2)], [(0, 0), (1, 0), (1, 1)], [(0, 0), (1, 0), (2, 0)],
          [(0, 0), (0, 1), (1, 0), (2, 0)], [(0, 0), (0, 1), (1, 0), (1, 1)]]
-    d.problem("Practice 1.3", "This square was cut along the lines. Which shape was <b>not</b> obtained?",
+    d.problem(f"Practice {set_num}.3", "This square was cut along the lines. Which shape was <b>not</b> obtained?",
               cut_problem(g, o, 4), "below")
-    key.append(("1.3", "E", "Pieces: three L-shapes of 4, one T, two L-shapes of 3, one straight 3. No 2x2 square."))
+    key.append((f"{set_num}.3", "E", "Pieces: three L-shapes of 4, one T, two L-shapes of 3, one straight 3. No 2x2 square."))
 
-    # ---------------- Set 2 ------------------------------------------------
-    d.heading("Set 2 - Pieces of a skyline", "Based on 2002, Problem 7")
+
+def q_2002_7(d, key, set_num=2):
+    d.heading(f"Set {set_num} - Pieces of a skyline", "Based on 2002, Problem 7")
     sky = [("A", 40), ("A", 40), ("H", 42), ("V", 40), ("H", 83), ("V", 42), ("D", 42, 43), ("D", 43, -43),
            ("V", -42), ("H", 83), ("V", -40), ("H", 42), ("D", 40, 40), ("D", 40, -40), ("V", 80), ("A", 40),
            ("A", 40), ("V", -80), ("H", 40), ("V", 40), ("H", 45), ("V", 85), ("H", 15), ("V", -85), ("H", 65),
@@ -561,9 +551,9 @@ def build():
            [("A", 35), ("A", 35), ("H", 40), ("V", 50)],
            [("V", 40), ("H", 30), ("D", 25, 35)],
            [("H", 25), ("V", 110), ("H", 20), ("V", -110), ("H", 25)]]
-    d.problem("Practice 2.1", "Here is the skyline of a town. Which piece <b>cannot</b> belong to it?",
+    d.problem(f"Practice {set_num}.1", "Here is the skyline of a town. Which piece <b>cannot</b> belong to it?",
               skyline_problem(sky, pcs, 0.48), "below")
-    key.append(("2.1", "A", "In the skyline there is a flat part between the wall and the pointed roof. Piece A has the roof sitting straight on the wall."))
+    key.append((f"{set_num}.1", "A", "In the skyline there is a flat part between the wall and the pointed roof. Piece A has the roof sitting straight on the wall."))
 
     sky = [("H", 50), ("V", 50), ("H", 25), ("V", -15), ("H", 20), ("V", 15), ("H", 25), ("V", -15), ("H", 20),
            ("V", 15), ("H", 25), ("V", -50), ("H", 40), ("A", 50), ("H", 40), ("D", 35, 50), ("H", 40),
@@ -573,9 +563,9 @@ def build():
            [("H", 20), ("D", 35, -50), ("H", 40)],
            [("H", 25), ("V", -15), ("H", 20), ("V", 15), ("H", 25), ("V", -50), ("H", 20)],
            [("V", 50), ("H", 25), ("V", -15), ("H", 20), ("V", 15), ("H", 25), ("V", -50)]]
-    d.problem("Practice 2.2", "Here is the skyline of a castle. Which piece <b>cannot</b> belong to it?",
+    d.problem(f"Practice {set_num}.2", "Here is the skyline of a castle. Which piece <b>cannot</b> belong to it?",
               skyline_problem(sky, pcs, 0.42), "below")
-    key.append(("2.2", "E", "The castle wall has TWO notches at the top. Piece E shows a whole tower top with only one notch."))
+    key.append((f"{set_num}.2", "E", "The castle wall has TWO notches at the top. Piece E shows a whole tower top with only one notch."))
 
     sky = [("H", 50), ("A", 30), ("H", 25), ("V", 60), ("D", 25, 40), ("D", 25, -40), ("V", -60), ("H", 40),
            ("A", 60), ("H", 25), ("V", 90), ("H", 25), ("V", -35), ("H", 25), ("V", -55), ("H", 50)]
@@ -584,12 +574,13 @@ def build():
            [("V", 50), ("H", 25), ("V", -35), ("H", 25), ("V", -55), ("H", 20)],
            [("A", 30), ("H", 25), ("V", -40)],
            [("V", -40), ("H", 40), ("A", 60)]]
-    d.problem("Practice 2.3", "Here is a skyline with a small arch, a tower and a dome. Which piece "
+    d.problem(f"Practice {set_num}.3", "Here is a skyline with a small arch, a tower and a dome. Which piece "
               "<b>cannot</b> belong to it?", skyline_problem(sky, pcs, 0.45), "below")
-    key.append(("2.3", "D", "After each arch the line goes flat and then UP. Piece D goes down after the arch."))
+    key.append((f"{set_num}.3", "D", "After each arch the line goes flat and then UP. Piece D goes down after the arch."))
 
-    # ---------------- Set 3 ------------------------------------------------
-    d.heading("Set 3 - Balance scales", "Based on 2002, Problem 9")
+
+def q_2002_9(d, key, set_num=3):
+    d.heading(f"Set {set_num} - Balance scales", "Based on 2002, Problem 9")
     d.problem("Original 2002 #9.", "On one plate of a balance there are 6 oranges (small circles) and on the "
               "other there are melons (big circles). When we put one more melon, exactly like the others, on the "
               "orange plate, the balance is level. The weight of one melon is the same as:",
@@ -597,50 +588,52 @@ def build():
               ["2 oranges", "3 oranges", "4 oranges", "5 oranges", "6 oranges"], 3)
     key.append(("2002 #9", "E", "6 oranges + 1 melon = 2 melons. Take one melon off each side: 6 oranges = 1 melon."))
 
-    d.problem("Practice 3.1", "On one plate there are 8 plums (small circles) and on the other 3 lemons "
+    d.problem(f"Practice {set_num}.1", "On one plate there are 8 plums (small circles) and on the other 3 lemons "
               "(gray circles). When we put one more lemon on the plum plate, the balance is level. "
               "One lemon weighs the same as:",
               fig_balance([4] * 8, [7, 7, 7], 1), "right",
               ["2 plums", "3 plums", "4 plums", "5 plums", "8 plums"], 3)
-    key.append(("3.1", "C", "8 plums + 1 lemon = 3 lemons, so 8 plums = 2 lemons, so 1 lemon = 4 plums."))
+    key.append((f"{set_num}.1", "C", "8 plums + 1 lemon = 3 lemons, so 8 plums = 2 lemons, so 1 lemon = 4 plums."))
 
-    d.problem("Practice 3.2", "On one plate there are 10 cherries (small circles) and on the other 4 apples "
+    d.problem(f"Practice {set_num}.2", "On one plate there are 10 cherries (small circles) and on the other 4 apples "
               "(gray circles). When we put 2 more apples on the cherry plate, the balance is level. "
               "One apple weighs the same as:",
               fig_balance([3.4] * 10, [7, 7, 7, 7], 1), "right",
               ["2 cherries", "3 cherries", "4 cherries", "5 cherries", "10 cherries"], 3)
-    key.append(("3.2", "D", "10 cherries + 2 apples = 4 apples, so 10 cherries = 2 apples, so 1 apple = 5 cherries."))
+    key.append((f"{set_num}.2", "D", "10 cherries + 2 apples = 4 apples, so 10 cherries = 2 apples, so 1 apple = 5 cherries."))
 
-    d.problem("Practice 3.3", "The balance is level. On the left plate there is 1 melon (big circle) and 3 "
+    d.problem(f"Practice {set_num}.3", "The balance is level. On the left plate there is 1 melon (big circle) and 3 "
               "oranges; on the right plate there are 9 oranges. How many oranges weigh the same as "
               "<b>2 melons</b>?",
               fig_balance([9, 4, 4, 4], [4] * 9, 0), "right", [6, 8, 9, 12, 18])
-    key.append(("3.3", "D", "Take 3 oranges off each side: 1 melon = 6 oranges, so 2 melons = 12 oranges."))
+    key.append((f"{set_num}.3", "D", "Take 3 oranges off each side: 1 melon = 6 oranges, so 2 melons = 12 oranges."))
 
-    # ---------------- Set 4 ------------------------------------------------
-    d.heading("Set 4 - Red outside, blue inside", "Based on 2003, Problem 9")
+
+def q_2003_9(d, key, set_num=4):
+    d.heading(f"Set {set_num} - Red outside, blue inside", "Based on 2003, Problem 9")
     d.problem("Original 2003 #9.", "Chris built the brick in the picture using red and blue cubes of the same "
               "size. The outside of the brick is completely red, but all cubes used inside are blue. "
               "How many blue cubes did Chris use?", fig_brick(5, 4, 4), "right", [12, 24, 36, 40, 48])
     key.append(("2003 #9", "A", "Brick is 5 x 4 x 4. Remove the outer layer: inside is 3 x 2 x 2 = 12 blue cubes."))
 
-    d.problem("Practice 4.1", "Maya built this brick (4 cubes wide, 4 cubes tall, 3 cubes deep). The outside "
+    d.problem(f"Practice {set_num}.1", "Maya built this brick (4 cubes wide, 4 cubes tall, 3 cubes deep). The outside "
               "is completely red and all the cubes inside are blue. How many blue cubes did she use?",
               fig_brick(4, 4, 3), "right", [2, 4, 6, 8, 12])
-    key.append(("4.1", "B", "Inside is (4-2) x (4-2) x (3-2) = 2 x 2 x 1 = 4."))
+    key.append((f"{set_num}.1", "B", "Inside is (4-2) x (4-2) x (3-2) = 2 x 2 x 1 = 4."))
 
-    d.problem("Practice 4.2", "Leo built this brick (6 cubes wide, 3 cubes tall, 4 cubes deep). The outside "
+    d.problem(f"Practice {set_num}.2", "Leo built this brick (6 cubes wide, 3 cubes tall, 4 cubes deep). The outside "
               "is completely red and all the cubes inside are blue. How many blue cubes did he use?",
               fig_brick(6, 3, 4), "right", [4, 6, 8, 12, 16])
-    key.append(("4.2", "C", "Inside is (6-2) x (3-2) x (4-2) = 4 x 1 x 2 = 8."))
+    key.append((f"{set_num}.2", "C", "Inside is (6-2) x (3-2) x (4-2) = 4 x 1 x 2 = 8."))
 
-    d.problem("Practice 4.3", "Anna built this brick (5 cubes wide, 3 cubes tall, 3 cubes deep). The outside "
+    d.problem(f"Practice {set_num}.3", "Anna built this brick (5 cubes wide, 3 cubes tall, 3 cubes deep). The outside "
               "is completely red and the cubes inside are blue. How many <b>red</b> cubes did she use?",
               fig_brick(5, 3, 3), "right", [30, 36, 39, 42, 45])
-    key.append(("4.3", "D", "Total = 5 x 3 x 3 = 45. Inside (blue) = 3 x 1 x 1 = 3. Red = 45 - 3 = 42."))
+    key.append((f"{set_num}.3", "D", "Total = 5 x 3 x 3 = 45. Inside (blue) = 3 x 1 x 1 = 3. Red = 45 - 3 = 42."))
 
-    # ---------------- Set 5 ------------------------------------------------
-    d.heading("Set 5 - Folding a house", "Based on 2003, Problem 12")
+
+def q_2003_12(d, key, set_num=5):
+    d.heading(f"Set {set_num} - Folding a house", "Based on 2003, Problem 12")
     tip = ("<i>(The dark parts at the top of the picture are the roof. The shape in the middle is the floor.)</i>")
     net = {"F": "door", "K": None, "L": None, "R": "dot"}
     opts = [("GL", None, "dot"), ("SL", "door", None), ("GL", "door", "dot"), ("SL", None, "dot"), ("GL", None, "door")]
@@ -650,24 +643,25 @@ def build():
 
     net = {"F": None, "K": "door", "L": "dot", "R": None}
     opts = [("GL", "door", "dot"), ("SL", "door", None), ("SL", "door", "dot"), ("GL", None, None), ("SL", None, "dot")]
-    d.problem("Practice 5.1", "This picture is cut out and folded to make a house. Which house does it become? " + tip,
+    d.problem(f"Practice {set_num}.1", "This picture is cut out and folded to make a house. Which house does it become? " + tip,
               house_problem(net, opts, 2), "below")
-    key.append(("5.1", "C", "The door is on the end wall that has the roof attached. Facing that door, the dot wall is on your left."))
+    key.append((f"{set_num}.1", "C", "The door is on the end wall that has the roof attached. Facing that door, the dot wall is on your left."))
 
     net = {"F": "door", "K": "dot", "L": "win", "R": None}
     opts = [("GL", "dot", "win"), ("SL", "door", "win"), ("SL", "dot", None), ("GL", "door", "win"), ("GL", "door", None)]
-    d.problem("Practice 5.2", "This picture is cut out and folded to make a house. Which house does it become? " + tip,
+    d.problem(f"Practice {set_num}.2", "This picture is cut out and folded to make a house. Which house does it become? " + tip,
               house_problem(net, opts, 3), "below")
-    key.append(("5.2", "D", "Facing the door wall, the window wall is on your right and the plain wall on your left. Only D shows that."))
+    key.append((f"{set_num}.2", "D", "Facing the door wall, the window wall is on your right and the plain wall on your left. Only D shows that."))
 
     net = {"F": "dot", "K": None, "L": "door", "R": "win"}
     opts = [("SL", "dot", "door"), ("GL", "dot", "door"), ("GL", None, "door"), ("SL", None, "win"), ("GL", "dot", "win")]
-    d.problem("Practice 5.3", "This picture is cut out and folded to make a house. Which house does it become? " + tip,
+    d.problem(f"Practice {set_num}.3", "This picture is cut out and folded to make a house. Which house does it become? " + tip,
               house_problem(net, opts, 1), "below")
-    key.append(("5.3", "B", "Facing the dot end wall: the door wall is on your right, the window wall on your left. B shows the dot wall with the door wall to its right."))
+    key.append((f"{set_num}.3", "B", "Facing the dot end wall: the door wall is on your right, the window wall on your left. B shows the dot wall with the door wall to its right."))
 
-    # ---------------- Set 6 ------------------------------------------------
-    d.heading("Set 6 - Area of a letter on squared paper", "Based on 2003, Problem 14")
+
+def q_2003_14(d, key, set_num=6):
+    d.heading(f"Set {set_num} - Area of a letter on squared paper", "Based on 2003, Problem 14")
     q = "If the side of each little square is 1 cm, what is the area of the letter %s (in square cm)?"
     N = [[(1, 0), (2, 0), (2, 6), (1, 6)], [(5, 0), (6, 0), (6, 6), (5, 6)], [(2, 6), (3, 6), (5, 0), (4, 0)]]
     assert letter_area(N) == 18
@@ -676,29 +670,251 @@ def build():
 
     Z = [[(1, 6), (6, 6), (6, 7), (1, 7)], [(1, 0), (6, 0), (6, 1), (1, 1)], [(4, 6), (6, 6), (3, 1), (1, 1)]]
     assert letter_area(Z) == 20
-    d.problem("Practice 6.1", q % "Z", fig_letter(7, 7, Z, 14), "right", [16, 18, 20, 22, 24])
-    key.append(("6.1", "C", "Top bar 5 + bottom bar 5 + slanted part (2 wide, 5 tall) 10 = 20."))
+    d.problem(f"Practice {set_num}.1", q % "Z", fig_letter(7, 7, Z, 14), "right", [16, 18, 20, 22, 24])
+    key.append((f"{set_num}.1", "C", "Top bar 5 + bottom bar 5 + slanted part (2 wide, 5 tall) 10 = 20."))
 
     V = [[(1, 5), (3, 5), (4, 2), (5, 5), (7, 5), (5, 0), (3, 0)]]
     assert letter_area(V) == 17
-    d.problem("Practice 6.2", q % "V", fig_letter(8, 5, V), "right", [15, 16, 17, 18, 20])
-    key.append(("6.2", "C", "Without the notch the shape is a 2 x 5 rectangle (10) plus two side triangles (each half of 2 x 5 = 5), so 20. The white triangle notch at the top is half of 2 x 3 = 3. 20 - 3 = 17."))
+    d.problem(f"Practice {set_num}.2", q % "V", fig_letter(8, 5, V), "right", [15, 16, 17, 18, 20])
+    key.append((f"{set_num}.2", "C", "Without the notch the shape is a 2 x 5 rectangle (10) plus two side triangles (each half of 2 x 5 = 5), so 20. The white triangle notch at the top is half of 2 x 3 = 3. 20 - 3 = 17."))
 
     M = [[(1, 0), (2, 0), (2, 5), (1, 5)], [(8, 0), (9, 0), (9, 5), (8, 5)],
          [(2, 5), (5, 2), (8, 5), (8, 3), (5, 0), (2, 3)]]
     assert letter_area(M) == 22
-    d.problem("Practice 6.3", q % "M", fig_letter(10, 5, M, 14), "right", [18, 20, 22, 24, 26])
-    key.append(("6.3", "C", "Two side bars: 5 + 5 = 10. The middle V is two slanted strips, each 3 across and 2 tall = 6. 10 + 6 + 6 = 22."))
+    d.problem(f"Practice {set_num}.3", q % "M", fig_letter(10, 5, M, 14), "right", [18, 20, 22, 24, 26])
+    key.append((f"{set_num}.3", "C", "Two side bars: 5 + 5 = 10. The middle V is two slanted strips, each 3 across and 2 tall = 6. 10 + 6 + 6 = 22."))
+
+
+# ------------------------------------------------- 2007 #1: Forking roads
+def valid_fork_groups(forks):
+    """Given a list of forks (e.g. [(1, 2), (3, 4), (5, 6)]), return all valid tuples picking 1 per fork."""
+    res = [()]
+    for branch in forks:
+        res = [prev + (item,) for prev in res for item in branch]
+    return set(res)
+
+
+def check_fork_road(forks, option_tuples, answer_idx):
+    valid = valid_fork_groups(forks)
+    good = [i for i, opt in enumerate(option_tuples) if tuple(opt) in valid]
+    assert good == [answer_idx], (forks, good, answer_idx)
+
+
+def fig_fork_road(forks):
+    """Draw a walker on the left and a sequence of road forks with labels."""
+    n = len(forks)
+    seg_w = 88
+    lead_w = 24
+    walker_w = 24
+    W = walker_w + lead_w + n * seg_w
+    H = 54
+
+    def draw(c, x, y):
+        cy = y + H / 2
+        c.setLineWidth(1.2)
+        c.setStrokeColor(colors.black)
+        c.setFillColor(colors.black)
+
+        # Draw little walker on the left
+        wx = x + 10
+        c.circle(wx, cy + 11, 3.2, stroke=1, fill=0)  # head
+        c.line(wx, cy + 7.8, wx, cy + 2)               # neck/torso
+        c.line(wx - 6, cy + 5, wx + 6, cy + 8)         # arms
+        p = c.beginPath()                              # skirt/dress
+        p.moveTo(wx, cy + 2)
+        p.lineTo(wx - 5, cy - 6)
+        p.lineTo(wx + 5, cy - 6)
+        p.close()
+        c.drawPath(p, stroke=1, fill=0)
+        c.line(wx - 2.5, cy - 6, wx - 2.5, cy - 12)    # left leg
+        c.line(wx + 2.5, cy - 6, wx + 2.5, cy - 12)    # right leg
+
+        # Road parameters
+        rh = 5.5   # half-width of main road
+        bh = 13.0  # vertical offset of top/bottom branch centerlines
+        rx = x + walker_w
+
+        # Initial straight road segment
+        c.line(rx, cy + rh, rx + lead_w, cy + rh)
+        c.line(rx, cy - rh, rx + lead_w, cy - rh)
+        cx = rx + lead_w
+
+        for branch in forks:
+            # Outer boundary curves (top and bottom of road)
+            f_len = 66
+            s_len = seg_w - f_len
+            mid = cx + f_len / 2
+            end = cx + f_len
+
+            # Top outer & inner walls of upper branch, bottom outer & inner walls of lower branch
+            for sign in (+1, -1):
+                # Outer wall: from cy + sign*rh up to cy + sign*(bh + 4.5) and back
+                p_out = c.beginPath()
+                p_out.moveTo(cx, cy + sign * rh)
+                p_out.curveTo(cx + 16, cy + sign * rh, mid - 14, cy + sign * (bh + 4.5), mid, cy + sign * (bh + 4.5))
+                p_out.curveTo(mid + 14, cy + sign * (bh + 4.5), end - 16, cy + sign * rh, end, cy + sign * rh)
+                c.drawPath(p_out, stroke=1, fill=0)
+
+                # Inner island wall: from (cx + 7, cy) to (mid, cy + sign*(bh - 4.5)) to (end - 7, cy)
+                p_in = c.beginPath()
+                p_in.moveTo(cx + 7, cy)
+                p_in.curveTo(cx + 18, cy + sign * 2, mid - 12, cy + sign * (bh - 4.5), mid, cy + sign * (bh - 4.5))
+                p_in.curveTo(mid + 12, cy + sign * (bh - 4.5), end - 18, cy + sign * 2, end - 7, cy)
+                c.drawPath(p_in, stroke=1, fill=0)
+
+            # White label boxes and bold labels at top (branch[0]) and bottom (branch[1])
+            for idx_b, sign in ((0, +1), (1, -1)):
+                ly = cy + sign * bh
+                c.setFillColor(colors.white)
+                c.rect(mid - 5.5, ly - 5.5, 11, 11, stroke=0, fill=1)
+                c.setFillColor(colors.black)
+                c.setFont("Helvetica-Bold", 10)
+                c.drawCentredString(mid, ly - 3.5, str(branch[idx_b]))
+
+            # Straight connector to next fork
+            c.line(end, cy + rh, end + s_len, cy + rh)
+            c.line(end, cy - rh, end + s_len, cy - rh)
+            cx = end + s_len
+
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return W, H, draw
+
+
+def q_2007_1(d, key, set_num=1):
+    d.heading(f"Set {set_num} - Choosing paths along a road", "Based on 2007, Problem 1")
+
+    # Original 2007 #1
+    forks = [(1, 2), (3, 4), (5, 6)]
+    opts = [(1, 2, 4), (2, 3, 4), (2, 3, 5), (1, 5, 6), (1, 2, 5)]
+    check_fork_road(forks, opts, 2)
+    d.problem(
+        "Original 2007 #1.",
+        "Zita walked from the left to the right and wrote the numbers she saw along the roads in her "
+        "notepad. Which of the following groups of numbers could be the numbers written by Zita?",
+        fig_fork_road(forks),
+        "below",
+        [f"{a}, {b} and {c}" for a, b, c in opts],
+        choice_cols=3,
+    )
+    key.append((
+        "2007 #1",
+        "C",
+        "At the 1st fork Zita picks 1 or 2; at the 2nd fork 3 or 4; at the 3rd fork 5 or 6. Only (2, 3 and 5) has one from each fork.",
+    ))
+
+    # Practice .1
+    forks1 = [(1, 2), (3, 4), (5, 6)]
+    opts1 = [(1, 2, 3), (1, 4, 6), (2, 3, 4), (1, 5, 6), (3, 4, 5)]
+    check_fork_road(forks1, opts1, 1)
+    d.problem(
+        f"Practice {set_num}.1",
+        "Leo walked from the left to the right along the roads and wrote down the three numbers he passed. "
+        "Which group of numbers could Leo have written?",
+        fig_fork_road(forks1),
+        "below",
+        [f"{a}, {b} and {c}" for a, b, c in opts1],
+        choice_cols=3,
+    )
+    key.append((
+        f"{set_num}.1",
+        "B",
+        "Leo must pick one from (1, 2), one from (3, 4), and one from (5, 6). Only (1, 4 and 6) picks one from each fork.",
+    ))
+
+    # Practice .2 (letters on the forks)
+    forks2 = [("A", "B"), ("C", "D"), ("E", "F")]
+    opts2 = [("A", "B", "E"), ("B", "C", "D"), ("A", "E", "F"), ("B", "D", "E"), ("C", "D", "F")]
+    check_fork_road(forks2, opts2, 3)
+    d.problem(
+        f"Practice {set_num}.2",
+        "Mia walked from left to right and wrote down the letters she passed along her path. "
+        "Which three letters could Mia have written?",
+        fig_fork_road(forks2),
+        "below",
+        [f"{a}, {b} and {c}" for a, b, c in opts2],
+        choice_cols=3,
+    )
+    key.append((
+        f"{set_num}.2",
+        "D",
+        "Mia picks A or B first, then C or D, then E or F. Only (B, D and E) has one letter from each fork.",
+    ))
+
+    # Practice .3 (twist: sum of the numbers along the road)
+    forks3 = [(2, 5), (3, 6), (4, 8)]
+    valid_sums = {a + b + c for a, b, c in valid_fork_groups(forks3)}  # {9, 13, 12, 16, 15, 19}
+    sum_choices = [10, 11, 14, 16, 20]
+    good_sums = [i for i, s in enumerate(sum_choices) if s in valid_sums]
+    assert good_sums == [3], (valid_sums, good_sums)
+    d.problem(
+        f"Practice {set_num}.3",
+        "Sam walked from left to right and <b>added up</b> the three numbers he passed along his road. "
+        "Which of the following could be Sam's total?",
+        fig_fork_road(forks3),
+        "below",
+        sum_choices,
+        choice_cols=5,
+    )
+    key.append((
+        f"{set_num}.3",
+        "D",
+        "Possible sums are 2+3+4=9, 2+6+4=12, 5+3+4=12, 2+3+8=13, 5+6+4=15, 2+6+8=16, 5+3+8=16, 5+6+8=19. From the choices, only 16 is possible (for example 2 + 6 + 8 = 16).",
+    ))
+
+
+# Registry of dedicated per-question implementations.
+# Every new (year, number) MUST be implemented as its own q_<year>_<num>(d, key, set_num) method!
+QUESTIONS = {
+    (2002, 4): q_2002_4,
+    (2002, 7): q_2002_7,
+    (2002, 9): q_2002_9,
+    (2003, 9): q_2003_9,
+    (2003, 12): q_2003_12,
+    (2003, 14): q_2003_14,
+    (2007, 1): q_2007_1,
+}
+
+
+def generate_set(selected_questions, out_pdf, out_key_pdf, subtitle):
+    missing = [q for q in selected_questions if q not in QUESTIONS]
+    if missing:
+        raise NotImplementedError(
+            f"Questions {missing} do not have dedicated methods yet! "
+            "Inspect the source PDF(s) and implement q_<year>_<num>(d, key, set_num) for each one."
+        )
+    d = Doc(out_pdf)
+    c = d.c
+    c.setFont("Helvetica-Bold", 20)
+    c.drawCentredString(PW / 2, PH - 70, "Math Kangaroo Practice - Grades 3-4")
+    c.setFont("Helvetica", 11)
+    c.drawCentredString(PW / 2, PH - 90, subtitle)
+    c.drawCentredString(PW / 2, PH - 105, "Each original problem is followed by three similar practice problems.")
+    d.y = PH - 130
+    key = []
+
+    for idx, q_id in enumerate(selected_questions, start=1):
+        QUESTIONS[q_id](d, key, set_num=idx)
 
     d.save()
-    print("wrote", OUT)
+    print("wrote", out_pdf)
 
-    # ---------------- separate answer key PDF ------------------------------
     write_answer_key(
-        OUT_KEY,
+        out_key_pdf,
         "Math Kangaroo Practice - Answer Key",
-        "For practice_2002_2003.pdf (2002: #4, #7, #9  |  2003: #9, #12, #14)",
+        f"For {out_pdf} ({subtitle})",
         key,
+    )
+
+
+def build():
+    selected = [(2002, 4), (2002, 7), (2002, 9), (2003, 9), (2003, 12), (2003, 14)]
+    generate_set(
+        selected,
+        OUT,
+        OUT_KEY,
+        "Selected problems from 2002 (#4, #7, #9) and 2003 (#9, #12, #14)",
     )
 
 
