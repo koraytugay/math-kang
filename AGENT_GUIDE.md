@@ -117,7 +117,7 @@ Verify:
 
 ## 4. Currently Implemented Questions in `generate_practice.py`
 
-Only the following 7 questions have been implemented so far:
+Only the following 8 questions have been implemented so far:
 
 | Question ID | Function in `generate_practice.py` | Description |
 |---|---|---|
@@ -128,6 +128,7 @@ Only the following 7 questions have been implemented so far:
 | `(2003, 12)` | `q_2003_12(d, key, set_num)` | 2D paper net of a house folded into 3D isometric houses A–E |
 | `(2003, 14)` | `q_2003_14(d, key, set_num)` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
 | `(2007, 1)` | `q_2007_1(d, key, set_num)` | Forking road diagram — choosing one number/letter per road split |
+| `(2007, 14)` | `q_2007_14(d, key, set_num)` | 3D cube aquarium (3×3×3) — counting 1 dm cubes inside / missing to fill |
 
 **Any other `(year, number)` requested by the user is NEW** — you must inspect the source PDF and implement
 a new dedicated `q_<year>_<number>(d, key, set_num)` function for it!
