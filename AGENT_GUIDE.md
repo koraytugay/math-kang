@@ -25,7 +25,7 @@ Every single contest problem (`<year> #<number>`) must have **its own dedicated,
 The folder `/Users/kt/mathkang` holds past **Math Kangaroo** contest PDFs (`2002.pdf`, `2003.pdf`, `2007.pdf`,
 and any new PDFs the user adds over time).
 
-When the user specifies questions (via `PROMPT_TEMPLATE.md` or directly in chat, e.g.
+When the user specifies questions (via `PROMPT_TEMPLATE.md`, via `prompt-random.md` + `question-pool.txt`, or directly in chat, e.g.
 `2002: 4, 7, 9` and `2003: 9, 12, 14`), you must:
 
 1. Check `QUESTIONS_INDEX.md` (and `QUESTIONS` in `generate_practice.py`) to see which of the requested `(year, number)` questions already have a dedicated `q_<year>_<number>` method, and which ones are **new (not yet implemented)**.
