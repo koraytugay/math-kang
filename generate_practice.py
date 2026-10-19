@@ -68,7 +68,7 @@ class Doc:
             self.new_page()
 
     def heading(self, text, sub=None):
-        self.need(60)
+        self.need(140)
         c = self.c
         c.setFont("Helvetica-Bold", 14)
         c.drawString(ML, self.y - 14, text)
@@ -2182,6 +2182,698 @@ def q_2007_10(d, key, set_num=1, include_orig=True):
     ))
 
 
+# ------------------------------------------------- Set 10: 2002 #10 Digit occurrences in house numbers
+def fig_house_street(first_num, second_num, last_num, target_digit):
+    """Draw a compact row of three little houses showing the numbering range first_num, second_num, ..., last_num."""
+    w = 136
+    h = 46
+
+    def draw_house(c, hx, hy, label):
+        bw, bh = 28, 22
+        roof_h = 12
+        # House body
+        c.setFillColor(colors.Color(0.93, 0.93, 0.93))
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(1.1)
+        c.rect(hx, hy, bw, bh, stroke=1, fill=1)
+        # Roof triangle
+        p = c.beginPath()
+        p.moveTo(hx - 3, hy + bh)
+        p.lineTo(hx + bw / 2, hy + bh + roof_h)
+        p.lineTo(hx + bw + 3, hy + bh)
+        p.close()
+        c.setFillColor(colors.Color(0.78, 0.78, 0.78))
+        c.drawPath(p, stroke=1, fill=1)
+        # Number plaque inside house
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawCentredString(hx + bw / 2, hy + 7, str(label))
+
+    def draw(c, x, y):
+        by = y + 6
+        draw_house(c, x + 4, by, first_num)
+        draw_house(c, x + 40, by, second_num)
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 12)
+        c.drawCentredString(x + 83, by + 9, "...")
+        draw_house(c, x + 98, by, last_num)
+        # Ground line
+        c.setLineWidth(0.9)
+        c.setStrokeColor(colors.black)
+        c.line(x, by, x + w - 4, by)
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_digit_occurrences(start_num, end_num, digit, choices, answer_idx, mode="occurrences"):
+    d_str = str(digit)
+    if mode == "occurrences":
+        val = sum(str(n).count(d_str) for n in range(start_num, end_num + 1))
+    elif mode == "houses_with_digit":
+        val = sum(1 for n in range(start_num, end_num + 1) if d_str in str(n))
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+    assert choices[answer_idx] == val, f"Expected {val} at index {answer_idx}, got {choices[answer_idx]}"
+    matches = [i for i, ch in enumerate(choices) if ch == val]
+    assert matches == [answer_idx], f"Expected unique match at {answer_idx}, got {matches}"
+
+
+def q_2002_10(d, key, set_num=1, include_orig=True, num_practice=5):
+    d.heading(
+        f"Problem {set_num}: 2002 #10 - Digit Occurrences in House Numbers",
+        "Counting how many times a digit appears across a sequential range of numbers",
+    )
+
+    if include_orig:
+        opts0 = [2, 4, 8, 16, 32]
+        check_digit_occurrences(1, 24, 2, opts0, 2)
+        d.problem(
+            "2002 #10",
+            "Joseph lives on a short street where the houses are numbered sequentially from 1 to 24. "
+            "How many times does the digit 2 occur in the numbers of those houses?",
+            fig_house_street(1, 2, 24, 2),
+            "right",
+            opts0,
+            choice_cols=5,
+        )
+        key.append((
+            "2002 #10",
+            "C",
+            "List the house numbers from 1 to 24 that contain the digit 2: "
+            "2, 12, 20, 21, 22, 23, and 24. Notice that house number 22 contains two 2s! "
+            "Counting every digit 2 gives 1 + 1 + 1 + 1 + 2 + 1 + 1 = 8 times.",
+        ))
+
+    practices = [
+        # Practice .1 (Answer: A) 10)
+        (
+            1, 35, 3, [10, 8, 9, 11, 12], 0, "occurrences",
+            "Sophia lives on Maple Street where the houses are numbered sequentially from 1 to 35. "
+            "How many times does the digit 3 occur in the numbers of those houses?",
+            "In the ones place, the digit 3 appears in 3, 13, 23, and 33 (4 times). "
+            "In the tens place, the digit 3 appears in 30, 31, 32, 33, 34, and 35 (6 times). "
+            "In total, the digit 3 occurs 4 + 6 = 10 times (counting both 3s in 33).",
+        ),
+        # Practice .2 (Answer: B) 7)
+        (
+            1, 42, 4, [6, 7, 8, 9, 14], 1, "occurrences",
+            "A puzzle booklet has its pages numbered sequentially from 1 to 42. "
+            "How many times does the digit 4 occur in the page numbers?",
+            "In the ones place, the digit 4 appears in 4, 14, 24, and 34 (4 times). "
+            "In the tens place, the digit 4 appears in 40, 41, and 42 (3 times). "
+            "In total, the digit 4 occurs 4 + 3 = 7 times.",
+        ),
+        # Practice .3 (Answer: D) 13)
+        (
+            1, 29, 1, [11, 12, 14, 13, 15], 3, "occurrences",
+            "The lockers in a school hallway are numbered sequentially from 1 to 29. "
+            "How many times does the digit 1 occur in the numbers of those lockers?",
+            "In the ones place, the digit 1 appears in 1, 11, and 21 (3 times). "
+            "In the tens place, the digit 1 appears in all ten numbers from 10 to 19 (10 times). "
+            "In total, the digit 1 occurs 3 + 10 = 13 times (with 11 contributing two 1s).",
+        ),
+        # Practice .4 (Answer: E) 12)
+        (
+            10, 30, 2, [9, 10, 11, 13, 12], 4, "occurrences",
+            "The seats in a theater row are numbered sequentially from 10 to 30. "
+            "How many times does the digit 2 occur in the numbers of those seats?",
+            "Between 10 and 30, the digit 2 appears in the ones place in 12 and 22 (2 times), "
+            "and in the tens place in every number from 20 to 29 (10 times). "
+            "In total, the digit 2 occurs 2 + 10 = 12 times.",
+        ),
+        # Practice .5 (Answer: A) 12)
+        (
+            1, 55, 5, [12, 10, 11, 13, 15], 0, "occurrences",
+            "Noah paints house numbers on all the doors along Oak Avenue, numbered sequentially from 1 to 55. "
+            "How many times does Noah paint the digit 5?",
+            "In the ones place, the digit 5 appears in 5, 15, 25, 35, 45, and 55 (6 times). "
+            "In the tens place, the digit 5 appears in 50, 51, 52, 53, 54, and 55 (6 times). "
+            "Altogether, Noah paints the digit 5 a total of 6 + 6 = 12 times.",
+        ),
+    ]
+
+    for idx, (s_num, e_num, dig, opts, ans_idx, mode, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_digit_occurrences(s_num, e_num, dig, opts, ans_idx, mode=mode)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            fig_house_street(s_num, s_num + 1, e_num, dig),
+            "right",
+            opts,
+            choice_cols=5,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set 11: 2002 #11 Cracked Clock Face
+def fig_cracked_clock(cracks, R=33):
+    """Draw a clock face (1..12) with cracks specified as lists of (r_frac, clock_pos) points."""
+    pad = 4
+    w = 2 * R + 2 * pad
+    h = 2 * R + 2 * pad
+
+    def draw(c, x, y):
+        cx = x + pad + R
+        cy = y + pad + R
+
+        def pt(r_frac, clock_pos):
+            ang = math.radians(90.0 - clock_pos * 30.0)
+            return cx + r_frac * R * math.cos(ang), cy + r_frac * R * math.sin(ang)
+
+        # Outer clock circle
+        c.setFillColor(colors.white)
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(1.2)
+        c.circle(cx, cy, R, stroke=1, fill=1)
+
+        # Clock numbers 1..12
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 7.8)
+        r_num = 0.78
+        for hr in range(1, 13):
+            px, py = pt(r_num, hr)
+            c.drawCentredString(px, py - 2.8, str(hr))
+
+        # Crack lines
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(0.95)
+
+        def bezier_ctrl(crack):
+            (r1, p1), (rm, pm), (r2, p2) = crack
+            x1, y1 = pt(r1, p1)
+            xm, ym = pt(rm, pm)
+            x2, y2 = pt(r2, p2)
+            ix1, iy1 = pt(0.46 if r1 >= 0.95 else r1, p1)
+            ix2, iy2 = pt(0.46 if r2 >= 0.95 else r2, p2)
+            cx1 = 0.62 * ix1 + 0.38 * xm
+            cy1 = 0.62 * iy1 + 0.38 * ym
+            cx2 = 0.62 * ix2 + 0.38 * xm
+            cy2 = 0.62 * iy2 + 0.38 * ym
+            return (x1, y1), (cx1, cy1), (cx2, cy2), (x2, y2)
+
+        def eval_bezier(bpts, t):
+            (x0, y0), (x1, y1), (x2, y2), (x3, y3) = bpts
+            u = 1.0 - t
+            bx = (u ** 3) * x0 + 3 * (u ** 2) * t * x1 + 3 * u * (t ** 2) * x2 + (t ** 3) * x3
+            by = (u ** 3) * y0 + 3 * (u ** 2) * t * y1 + 3 * u * (t ** 2) * y2 + (t ** 3) * y3
+            return bx, by
+
+        drawn_beziers = []
+        for crack in cracks:
+            if isinstance(crack[0], str) and crack[0] == "branch":
+                _, parent_idx, t_val, (r2, p2) = crack
+                bx, by = eval_bezier(drawn_beziers[parent_idx], t_val)
+                x2, y2 = pt(r2, p2)
+                c.line(bx, by, x2, y2)
+            elif len(crack) == 2:
+                (r1, p1), (r2, p2) = crack
+                c.line(*pt(r1, p1), *pt(r2, p2))
+                drawn_beziers.append(None)
+            elif len(crack) == 3:
+                bpts = bezier_ctrl(crack)
+                drawn_beziers.append(bpts)
+                (x1, y1), (cx1, cy1), (cx2, cy2), (x2, y2) = bpts
+                path = c.beginPath()
+                path.moveTo(x1, y1)
+                path.curveTo(cx1, cy1, cx2, cy2, x2, y2)
+                c.drawPath(path, stroke=1, fill=0)
+            else:
+                pts = [pt(rf, cp) for rf, cp in crack]
+                path = c.beginPath()
+                path.moveTo(*pts[0])
+                for qx, qy in pts[1:]:
+                    path.lineTo(qx, qy)
+                c.drawPath(path, stroke=1, fill=0)
+                drawn_beziers.append(None)
+
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_cracked_clock(options_parts, expected_sums, answer_idx):
+    """Verify each option partitions 1..12 and only answer_idx has piece sums matching expected_sums."""
+    full_clock = list(range(1, 13))
+    target_sorted = sorted(expected_sums)
+    assert sum(target_sorted) == 78, f"Target sums {target_sorted} do not add to 78"
+    matching = []
+    for idx, parts in enumerate(options_parts):
+        flat = sorted(x for p in parts for x in p)
+        assert flat == full_clock, f"Option {idx} does not partition 1..12: {parts}"
+        sums = sorted(sum(p) for p in parts)
+        if sums == target_sorted:
+            matching.append(idx)
+    assert matching == [answer_idx], f"Expected unique match at {answer_idx} for sums {target_sorted}, got {matching}"
+
+
+def q_2002_11(d, key, set_num=2, include_orig=True, num_practice=5):
+    d.heading(
+        f"Problem {set_num}: 2002 #11 - Cracked Clock Face",
+        "Partitioning the clock face (sum 1 + 2 + ... + 12 = 78) into pieces with given sum properties",
+    )
+
+    # Original 2002 #11: 4 pieces with consecutive sums (18, 19, 20, 21) -> Answer: C
+    if include_orig:
+        parts0 = [
+            [[9, 10], [7, 8], [11, 5, 6], [12, 1, 2, 3, 4]],        # A: sums 19, 15, 22, 22
+            [[11, 12], [7, 8, 9], [6], [10, 1, 2, 3, 4, 5]],        # B: sums 23, 24, 6, 25
+            [[12, 1, 2, 3], [9, 10], [11, 4, 5], [6, 7, 8]],        # C: sums 18, 19, 20, 21
+            [[10, 11], [9, 12, 1], [7, 8, 2, 3], [4, 5, 6]],        # D: sums 21, 22, 20, 15
+            [[8, 9, 10, 11], [12, 1, 2, 3], [4, 5, 6, 7]],          # E: only 3 pieces (38, 18, 22)
+        ]
+        cracks0 = [
+            # A: two cracks from top-left to bottom, short crack on left between 8 and 9
+            [[(1.0, 10.55), (0.35, 8.5), (1.0, 6.45)], [(1.0, 11.45), (0.15, 8.0), (1.0, 4.55)], ("branch", 0, 0.52, (1.0, 8.5))],
+            # B: top loop around 11,12; diagonal from 9.5 to 5.5; branch to 6.5
+            [[(1.0, 10.5), (0.28, 11.5), (1.0, 0.5)], [(1.0, 9.5), (0.35, 7.2), (1.0, 5.5)], ("branch", 1, 0.62, (1.0, 6.5))],
+            # C: 11.5 to 3.5; 10.5 to 5.5; branch from 8.5 to middle crack
+            [[(1.0, 11.5), (0.22, 1.5), (1.0, 3.5)], [(1.0, 10.5), (0.28, 8.0), (1.0, 5.5)], ("branch", 1, 0.45, (1.0, 8.5))],
+            # D: loop around 10,11; diagonal 1.5 to 8.5; curve 3.5 to 6.5
+            [[(1.0, 11.5), (0.28, 10.5), (1.0, 9.5)], [(1.0, 1.5), (0.05, 5.0), (1.0, 8.5)], [(1.0, 3.5), (0.32, 5.0), (1.0, 6.5)]],
+            # E: 11.5 to 7.5; branch to 3.5
+            [[(1.0, 11.5), (0.2, 9.5), (1.0, 7.5)], ("branch", 0, 0.5, (1.0, 3.5))],
+        ]
+        check_cracked_clock(parts0, [18, 19, 20, 21], 2)
+        fig0 = option_row([fig_cracked_clock(cr) for cr in cracks0], gap=12)
+        d.problem(
+            "2002 #11",
+            "The face of a clock is cracked into 4 pieces. The sums of the numbers within the parts are consecutive "
+            "numbers. Provided there is only one possible way to crack it, the face would look like:",
+            fig0,
+            "below",
+        )
+        key.append((
+            "2002 #11",
+            "C",
+            "The sum of all numbers on a clock face is 1 + 2 + ... + 12 = 78. Four consecutive numbers that add up "
+            "to 78 must be 18, 19, 20, and 21 (since 18 + 19 + 20 + 21 = 78). In clock C, the four pieces contain "
+            "{12, 1, 2, 3} = 18, {9, 10} = 19, {11, 4, 5} = 20, and {6, 7, 8} = 21.",
+        ))
+
+    practices = [
+        # Practice .1: 3 pieces with equal sums (26, 26, 26) -> Answer: A
+        (
+            [
+                [[11, 12, 1, 2], [9, 10, 3, 4], [5, 6, 7, 8]],          # A: 26, 26, 26
+                [[12, 1, 2, 3], [10, 11, 4, 5], [6, 7, 8, 9]],          # B: 18, 30, 30
+                [[10, 11, 12, 1], [8, 9, 2, 3], [4, 5, 6, 7]],          # C: 34, 22, 22
+                [[11, 12, 1], [9, 10, 2, 3], [4, 5, 6, 7, 8]],          # D: 24, 24, 30
+                [[11, 12, 1, 2], [10, 3, 4], [5, 6, 7, 8, 9]],          # E: 26, 17, 35
+            ],
+            [
+                [[(1.0, 10.5), (0.25, 12.0), (1.0, 2.5)], [(1.0, 8.5), (0.25, 6.0), (1.0, 4.5)]],
+                [[(1.0, 11.5), (0.25, 1.5), (1.0, 3.5)], [(1.0, 9.5), (0.25, 7.5), (1.0, 5.5)]],
+                [[(1.0, 9.5), (0.25, 11.5), (1.0, 1.5)], [(1.0, 7.5), (0.25, 5.5), (1.0, 3.5)]],
+                [[(1.0, 10.5), (0.25, 12.0), (1.0, 1.5)], [(1.0, 8.5), (0.25, 6.0), (1.0, 3.5)]],
+                [[(1.0, 10.5), (0.25, 12.0), (1.0, 2.5)], [(1.0, 9.5), (0.25, 7.0), (1.0, 4.5)]],
+            ],
+            [26, 26, 26],
+            0,
+            "The face of a clock is cracked into 3 pieces so that the sums of the numbers on all 3 pieces are equal. "
+            "Which clock face shows how it was cracked?",
+            "Since the numbers 1 through 12 add up to 78, each of the 3 equal pieces must have a sum of 78 ÷ 3 = 26. "
+            "In clock A, the top piece has 11 + 12 + 1 + 2 = 26, the middle piece has 9 + 10 + 3 + 4 = 26, "
+            "and the bottom piece has 5 + 6 + 7 + 8 = 26.",
+        ),
+        # Practice .2: 3 pieces with consecutive sums (25, 26, 27) -> Answer: B
+        (
+            [
+                [[11, 12, 1, 2], [3, 4, 5, 6], [7, 8, 9, 10]],          # A: 26, 18, 34
+                [[11, 12, 1, 2], [3, 4, 5, 6, 7], [8, 9, 10]],          # B: 26, 25, 27
+                [[12, 1, 2, 3], [4, 5, 6, 7, 8], [9, 10, 11]],          # C: 18, 30, 30
+                [[10, 11, 12], [1, 2, 3, 4, 5, 6], [7, 8, 9]],          # D: 33, 21, 24
+                [[11, 12, 1], [2, 3, 4, 5, 6, 7], [8, 9, 10]],          # E: 24, 27, 27
+            ],
+            [
+                [[(1.0, 10.5), (0.0, 0.0)], [(1.0, 2.5), (0.0, 0.0)], [(1.0, 6.5), (0.0, 0.0)]],
+                [[(1.0, 10.5), (0.0, 0.0)], [(1.0, 2.5), (0.0, 0.0)], [(1.0, 7.5), (0.0, 0.0)]],
+                [[(1.0, 11.5), (0.0, 0.0)], [(1.0, 3.5), (0.0, 0.0)], [(1.0, 8.5), (0.0, 0.0)]],
+                [[(1.0, 9.5), (0.0, 0.0)], [(1.0, 0.5), (0.0, 0.0)], [(1.0, 6.5), (0.0, 0.0)]],
+                [[(1.0, 10.5), (0.0, 0.0)], [(1.0, 1.5), (0.0, 0.0)], [(1.0, 7.5), (0.0, 0.0)]],
+            ],
+            [25, 26, 27],
+            1,
+            "The face of a clock is cracked into 3 pieces meeting at the center. The sums of the numbers within the 3 parts "
+            "are consecutive numbers. Which clock face shows how it was cracked?",
+            "Three consecutive numbers that add up to 78 are 25, 26, and 27 (25 + 26 + 27 = 78). "
+            "In clock B, the three pieces are {3, 4, 5, 6, 7} = 25, {11, 12, 1, 2} = 26, and {8, 9, 10} = 27.",
+        ),
+        # Practice .3: 2 pieces with equal sums (39, 39) -> Answer: D
+        (
+            [
+                [[12, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11]],            # A: 27, 51
+                [[11, 12, 1, 2, 3, 4], [5, 6, 7, 8, 9, 10]],            # B: 33, 45
+                [[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]],            # C: 21, 57
+                [[10, 11, 12, 1, 2, 3], [4, 5, 6, 7, 8, 9]],            # D: 39, 39
+                [[9, 10, 11, 12, 1, 2], [3, 4, 5, 6, 7, 8]],            # E: 45, 33
+            ],
+            [
+                [[(1.0, 11.5), (0.1, 2.5), (1.0, 5.5)]],
+                [[(1.0, 10.5), (0.1, 1.5), (1.0, 4.5)]],
+                [[(1.0, 0.5), (0.1, 3.5), (1.0, 6.5)]],
+                [[(1.0, 9.5), (0.1, 12.5), (1.0, 3.5)]],
+                [[(1.0, 8.5), (0.1, 11.5), (1.0, 2.5)]],
+            ],
+            [39, 39],
+            3,
+            "A clock face is cracked into 2 pieces by a single crack so that the sum of the numbers on one piece "
+            "equals the sum of the numbers on the other piece. Which clock face shows this crack?",
+            "Half of the total clock sum is 78 ÷ 2 = 39. In clock D, the crack goes between 9 and 10 on the left "
+            "and between 3 and 4 on the right, giving {10, 11, 12, 1, 2, 3} = 39 and {4, 5, 6, 7, 8, 9} = 39.",
+        ),
+        # Practice .4: 4 pieces where two pieces sum to 18 and two pieces sum to 21 -> Answer: E
+        (
+            [
+                [[12, 1, 2, 3], [11, 4, 5], [9, 10], [6, 7, 8]],        # A: 18, 20, 19, 21
+                [[12, 1, 2], [11, 3, 4], [9, 10, 5], [6, 7, 8]],        # B: 15, 18, 24, 21
+                [[11, 12, 1, 2], [10, 3, 4], [8, 9], [5, 6, 7]],        # C: 26, 17, 17, 18
+                [[12, 1, 2, 3], [10, 11], [7, 8, 9], [4, 5, 6]],        # D: 18, 21, 24, 15
+                [[12, 1, 2, 3], [10, 11], [8, 9, 4], [5, 6, 7]],        # E: 18, 21, 21, 18
+            ],
+            [
+                [[(1.0, 11.5), (0.22, 1.5), (1.0, 3.5)], [(1.0, 10.5), (0.28, 8.0), (1.0, 5.5)], ("branch", 1, 0.45, (1.0, 8.5))],
+                [[(1.0, 11.5), (0.22, 1.0), (1.0, 2.5)], [(1.0, 10.5), (0.28, 7.5), (1.0, 4.5)], ("branch", 1, 0.50, (1.0, 8.5))],
+                [[(1.0, 10.5), (0.22, 12.5), (1.0, 2.5)], [(1.0, 9.5), (0.28, 7.0), (1.0, 4.5)], ("branch", 1, 0.50, (1.0, 7.5))],
+                [[(1.0, 11.5), (0.22, 1.5), (1.0, 3.5)], [(1.0, 9.5), (0.28, 6.5), (1.0, 3.5)], ("branch", 1, 0.52, (1.0, 6.5))],
+                [[(1.0, 11.5), (0.22, 1.5), (1.0, 3.5)], [(1.0, 7.5), (0.28, 6.0), (1.0, 4.5)], ("branch", 0, 0.45, (1.0, 9.5))],
+            ],
+            [18, 18, 21, 21],
+            4,
+            "The face of a clock is cracked into 4 pieces so that two of the pieces each have a sum of 18, "
+            "and the other two pieces each have a sum of 21. Which clock face shows this?",
+            "In clock E, the top-right piece has {12, 1, 2, 3} = 18, the bottom piece has {5, 6, 7} = 18, "
+            "the top-left piece has {10, 11} = 21, and the middle piece has {8, 9, 4} = 21.",
+        ),
+        # Practice .5: 4 pieces meeting at center with sums 15, 18, 21, 24 (increasing by 3) -> Answer: C
+        (
+            [
+                [[12, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]],        # A: 15, 12, 21, 30
+                [[11, 12, 1], [2, 3, 4], [5, 6, 7], [8, 9, 10]],        # B: 24, 9, 18, 27
+                [[12, 1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11]],        # C: 18, 15, 24, 21
+                [[12, 1, 2, 3], [4, 5, 6, 7], [8, 9], [10, 11]],        # D: 18, 22, 17, 21
+                [[11, 12, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10]],        # E: 26, 12, 21, 19
+            ],
+            [
+                [[(1.0, 11.5), (0.0, 0.0)], [(1.0, 2.5), (0.0, 0.0)], [(1.0, 5.5), (0.0, 0.0)], [(1.0, 8.5), (0.0, 0.0)]],
+                [[(1.0, 10.5), (0.0, 0.0)], [(1.0, 1.5), (0.0, 0.0)], [(1.0, 4.5), (0.0, 0.0)], [(1.0, 7.5), (0.0, 0.0)]],
+                [[(1.0, 11.5), (0.0, 0.0)], [(1.0, 3.5), (0.0, 0.0)], [(1.0, 6.5), (0.0, 0.0)], [(1.0, 9.5), (0.0, 0.0)]],
+                [[(1.0, 11.5), (0.0, 0.0)], [(1.0, 3.5), (0.0, 0.0)], [(1.0, 7.5), (0.0, 0.0)], [(1.0, 9.5), (0.0, 0.0)]],
+                [[(1.0, 10.5), (0.0, 0.0)], [(1.0, 2.5), (0.0, 0.0)], [(1.0, 5.5), (0.0, 0.0)], [(1.0, 8.5), (0.0, 0.0)]],
+            ],
+            [15, 18, 21, 24],
+            2,
+            "The face of a clock is cracked into 4 wedge-shaped pieces meeting at the center. "
+            "When ordered from smallest to largest, the sums of the pieces increase by 3 each time (15, 18, 21, and 24). "
+            "Which clock face shows how it was cracked?",
+            "In clock C, the four wedges are {4, 5, 6} = 15, {12, 1, 2, 3} = 18, {10, 11} = 21, and {7, 8, 9} = 24. "
+            "Sorted in order, the sums are 15, 18, 21, and 24.",
+        ),
+    ]
+
+    for idx, (p_list, cr_list, exp_sums, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_cracked_clock(p_list, exp_sums, ans_idx)
+        fig = option_row([fig_cracked_clock(cr) for cr in cr_list], gap=12)
+        d.problem(f"Practice {set_num}.{idx}", text, fig, "below")
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set 12: 2002 #12 Kangaroo Zigzag Run
+def fig_zigzag_race(names, paths, grid_cols=13, grid_rows=10, s=10.5):
+    """Draw the dashed grid and thick orthogonal paths for 3 kangaroos."""
+    pad_x = 12
+    label_h = 15
+    top_ext = 1  # paths stick 1 unit above top dashed line (to y = grid_rows + 1)
+    w = grid_cols * s + 2 * pad_x
+    h = (grid_rows + top_ext) * s + label_h + 6
+
+    def draw(c, x, y):
+        ox = x + pad_x
+        oy = y + label_h
+
+        # 1. Dashed grid lines: x in 0..grid_cols, y in 0..grid_rows
+        c.setLineWidth(0.6)
+        c.setStrokeColor(colors.Color(0.35, 0.35, 0.35))
+        c.setDash(1.5, 1.5)
+        for gx in range(grid_cols + 1):
+            px = ox + gx * s
+            c.line(px, oy, px, oy + grid_rows * s)
+        for gy in range(grid_rows + 1):
+            py = oy + gy * s
+            c.line(ox, py, ox + grid_cols * s, py)
+        c.setDash([])
+
+        # 2. Thick solid zigzag paths
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(2.2)
+        c.setLineCap(1)
+        c.setLineJoin(1)
+        for path in paths:
+            p = c.beginPath()
+            x0, y0 = path[0]
+            p.moveTo(ox + x0 * s, oy + y0 * s)
+            for px, py in path[1:]:
+                p.lineTo(ox + px * s, oy + py * s)
+            c.drawPath(p, stroke=1, fill=0)
+        c.setLineCap(0)
+        c.setLineJoin(0)
+
+        # 3. Runner names centered beneath each starting x-coordinate
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 8.5)
+        for name, path in zip(names, paths):
+            sx = ox + path[0][0] * s
+            c.drawCentredString(sx, y + 3, name)
+
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def path_length_and_cells(path, grid_cols=13, grid_rows=10):
+    assert path[0][1] == 0, f"Path must start at y=0, got {path[0]}"
+    assert path[-1][1] == grid_rows + 1, f"Path must end at y={grid_rows + 1}, got {path[-1]}"
+    total = 0
+    used_vertices = {path[0]}
+    for (x1, y1), (x2, y2) in zip(path, path[1:]):
+        assert 0 <= x1 <= grid_cols and 0 <= x2 <= grid_cols, f"x out of bounds: {(x1, x2)}"
+        assert 0 <= y1 <= grid_rows + 1 and 0 <= y2 <= grid_rows + 1, f"y out of bounds: {(y1, y2)}"
+        dx, dy = abs(x2 - x1), abs(y2 - y1)
+        assert (dx == 0) ^ (dy == 0), f"Non-orthogonal segment: {(x1, y1)} -> {(x2, y2)}"
+        step_x = 0 if x2 == x1 else (1 if x2 > x1 else -1)
+        step_y = 0 if y2 == y1 else (1 if y2 > y1 else -1)
+        steps = dx + dy
+        for k in range(1, steps + 1):
+            v = (x1 + k * step_x, y1 + k * step_y)
+            assert v not in used_vertices, f"Self-intersecting path at {v}"
+            used_vertices.add(v)
+        total += steps
+    return total, used_vertices
+
+
+def check_zigzag_race(paths, expected_lengths, answer_idx):
+    all_vertices = set()
+    lengths = []
+    for p in paths:
+        L, verts = path_length_and_cells(p)
+        assert not (all_vertices & verts), f"Paths overlap at {all_vertices & verts}"
+        all_vertices |= verts
+        lengths.append(L)
+    assert lengths == list(expected_lengths), f"Expected path lengths {expected_lengths}, got {lengths}"
+    assert 0 <= answer_idx < 5
+
+
+def q_2002_12(d, key, set_num=3, include_orig=True, num_practice=5):
+    d.heading(
+        f"Problem {set_num}: 2002 #12 - Kangaroo Zigzag Run",
+        "Comparing total grid-segment lengths of zigzag paths",
+    )
+
+    # Original 2002 #12: Mary = 21, Norbert = 21, Oscar = 19 -> Answer: E
+    if include_orig:
+        paths0 = [
+            # Mary: 11 vertical + (2+3+1+1+1+2)=10 horizontal = 21
+            [(2, 0), (2, 3), (4, 3), (4, 5), (1, 5), (1, 6), (0, 6), (0, 7), (1, 7), (1, 8), (0, 8), (0, 10), (2, 10), (2, 11)],
+            # Norbert: 11 vertical + (1+2+1+1+1+2+1+1)=10 horizontal = 21
+            [(6, 0), (6, 1), (7, 1), (7, 2), (5, 2), (5, 3), (6, 3), (6, 4), (5, 4), (5, 5), (6, 5), (6, 6), (8, 6), (8, 8), (7, 8), (7, 9), (6, 9), (6, 11)],
+            # Oscar: 11 vertical + (1+1+1+1+1+1+1+1)=8 horizontal = 19
+            [(11, 0), (11, 1), (12, 1), (12, 2), (13, 2), (13, 3), (12, 3), (12, 4), (11, 4), (11, 5), (10, 5), (10, 6), (9, 6), (9, 7), (10, 7), (10, 8), (11, 8), (11, 11)],
+        ]
+        check_zigzag_race(paths0, [21, 21, 19], 4)
+        opts0 = [
+            "Mary and Oscar arrive at the same time",
+            "Norbert is first",
+            "Oscar is last",
+            "They all arrive at the same time",
+            "Mary and Norbert arrive at the same time",
+        ]
+        d.problem(
+            "2002 #12",
+            "During a zigzag run the kangaroos Mary, Norbert, and Oscar have to jump as drawn in the picture. "
+            "Suppose they jump at the same speed. Which statement is true?",
+            fig_zigzag_race(["Mary", "Norbert", "Oscar"], paths0),
+            "right",
+            opts0,
+            choice_cols=1,
+        )
+        key.append((
+            "2002 #12",
+            "E",
+            "All three kangaroos move upward by the exact same vertical distance (11 grid units) without ever going down. "
+            "Counting their horizontal side-to-side steps: Mary makes 2 + 3 + 1 + 1 + 1 + 2 = 10 horizontal steps (total 21), "
+            "Norbert makes 1 + 2 + 1 + 1 + 1 + 2 + 1 + 1 = 10 horizontal steps (total 21), and Oscar makes "
+            "1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = 8 horizontal steps (total 19). Oscar finishes first (19 steps), "
+            "while Mary and Norbert arrive at the same time (21 steps each).",
+        ))
+
+    practices = [
+        # Practice .1: Anna = 19, Ben = 21, Clara = 21 -> Answer: A (Anna is first)
+        (
+            ["Anna", "Ben", "Clara"],
+            [
+                # Anna: 11 vertical + (2+2+1+1+1+1)=8 horizontal = 19
+                [(2, 0), (2, 2), (0, 2), (0, 5), (2, 5), (2, 7), (3, 7), (3, 8), (2, 8), (2, 9), (1, 9), (1, 10), (2, 10), (2, 11)],
+                # Ben: 11 vertical + (2+3+2+1+2)=10 horizontal = 21
+                [(6, 0), (6, 2), (8, 2), (8, 4), (5, 4), (5, 6), (7, 6), (7, 8), (8, 8), (8, 10), (6, 10), (6, 11)],
+                # Clara: 11 vertical + (2+2+2+1+1+2)=10 horizontal = 21
+                [(11, 0), (11, 2), (13, 2), (13, 4), (11, 4), (11, 6), (9, 6), (9, 8), (10, 8), (10, 9), (9, 9), (9, 10), (11, 10), (11, 11)],
+            ],
+            [19, 21, 21],
+            [
+                "Anna is first",
+                "Ben is first",
+                "Clara is first",
+                "Anna is last",
+                "They all arrive at the same time",
+            ],
+            0,
+            1,
+            "During a zigzag run the kangaroos Anna, Ben, and Clara jump along the paths drawn in the picture "
+            "at the same speed. Which statement is true?",
+            "Each kangaroo travels 11 units upward. Counting horizontal steps: Anna takes 2 + 2 + 1 + 1 + 1 + 1 = 8 "
+            "horizontal steps (total 19), Ben takes 2 + 3 + 2 + 1 + 2 = 10 horizontal steps (total 21), and Clara takes "
+            "2 + 2 + 2 + 1 + 1 + 2 = 10 horizontal steps (total 21). Since 19 is the shortest path, Anna finishes first.",
+        ),
+        # Practice .2: Dan = 19, Eva = 23, Finn = 19 -> Answer: B (Dan and Finn arrive at the same time)
+        (
+            ["Dan", "Eva", "Finn"],
+            [
+                # Dan: 11 vertical + (2+3+2+1)=8 horizontal = 19
+                [(2, 0), (2, 3), (0, 3), (0, 6), (3, 6), (3, 9), (1, 9), (1, 10), (2, 10), (2, 11)],
+                # Eva: 11 vertical + (2+3+3+2+2)=12 horizontal = 23
+                [(6, 0), (6, 2), (8, 2), (8, 4), (5, 4), (5, 7), (8, 7), (8, 9), (6, 9), (6, 10), (8, 10), (8, 11)],
+                # Finn: 11 vertical + (2+2+2+2)=8 horizontal = 19
+                [(11, 0), (11, 2), (13, 2), (13, 5), (11, 5), (11, 8), (9, 8), (9, 10), (11, 10), (11, 11)],
+            ],
+            [19, 23, 19],
+            [
+                "Eva is first",
+                "Dan and Finn arrive at the same time",
+                "Finn is last",
+                "Dan and Eva arrive at the same time",
+                "They all arrive at the same time",
+            ],
+            1,
+            1,
+            "The kangaroos Dan, Eva, and Finn jump along the zigzag paths shown at the same speed. "
+            "Which statement is true?",
+            "All three paths go 11 units upward. Counting horizontal steps: Dan takes 2 + 3 + 2 + 1 = 8 horizontal steps "
+            "(total 19), Eva takes 2 + 3 + 3 + 2 + 2 = 12 horizontal steps (total 23), and Finn takes 2 + 2 + 2 + 2 = 8 "
+            "horizontal steps (total 19). Therefore, Dan and Finn arrive at the same time.",
+        ),
+        # Practice .3: Leo = 19, Mia = 19, Noah = 19 -> Answer: C (They all arrive at the same time)
+        (
+            ["Leo", "Mia", "Noah"],
+            [
+                # Leo: 11 vertical + (2+2+2+2)=8 horizontal = 19
+                [(2, 0), (2, 2), (0, 2), (0, 5), (2, 5), (2, 7), (0, 7), (0, 9), (2, 9), (2, 11)],
+                # Mia: 11 vertical + (1+2+2+2+1)=8 horizontal = 19
+                [(6, 0), (6, 2), (5, 2), (5, 4), (7, 4), (7, 6), (5, 6), (5, 9), (7, 9), (7, 10), (6, 10), (6, 11)],
+                # Noah: 11 vertical + (2+3+1+2)=8 horizontal = 19
+                [(11, 0), (11, 3), (13, 3), (13, 6), (10, 6), (10, 8), (9, 8), (9, 10), (11, 10), (11, 11)],
+            ],
+            [19, 19, 19],
+            [
+                "Leo is first",
+                "Mia is last",
+                "They all arrive at the same time",
+                "Only Leo and Mia arrive at the same time",
+                "Noah is first",
+            ],
+            2,
+            1,
+            "Leo, Mia, and Noah jump from the bottom to the top of the grid along the drawn paths at the same speed. "
+            "Which statement is true?",
+            "Every kangaroo moves 11 units upward. Counting horizontal steps: Leo takes 2 + 2 + 2 + 2 = 8 horizontal steps "
+            "(total 19), Mia takes 1 + 2 + 2 + 2 + 1 = 8 horizontal steps (total 19), and Noah takes 2 + 3 + 1 + 2 = 8 "
+            "horizontal steps (total 19). Since all three travel 19 grid segments, they all arrive at the same time.",
+        ),
+        # Practice .4: Max = 17, Nina = 19, Otto = 21 -> Answer: D (Otto is last)
+        (
+            ["Max", "Nina", "Otto"],
+            [
+                # Max: 11 vertical + (2+2+1+1)=6 horizontal = 17
+                [(2, 0), (2, 3), (0, 3), (0, 6), (2, 6), (2, 8), (1, 8), (1, 10), (2, 10), (2, 11)],
+                # Nina: 11 vertical + (2+2+2+2)=8 horizontal = 19
+                [(6, 0), (6, 2), (8, 2), (8, 5), (6, 5), (6, 7), (4, 7), (4, 9), (6, 9), (6, 11)],
+                # Otto: 11 vertical + (2+3+3+2)=10 horizontal = 21
+                [(11, 0), (11, 2), (13, 2), (13, 5), (10, 5), (10, 8), (13, 8), (13, 10), (11, 10), (11, 11)],
+            ],
+            [17, 19, 21],
+            [
+                "Max is last",
+                "Nina is first",
+                "Max and Nina arrive at the same time",
+                "Otto is last",
+                "Otto is first",
+            ],
+            3,
+            1,
+            "Max, Nina, and Otto jump along the paths drawn in the picture at the same speed. "
+            "Which statement is true?",
+            "All three paths have 11 vertical steps upward. Counting horizontal steps: Max takes 2 + 2 + 1 + 1 = 6 "
+            "horizontal steps (total 17), Nina takes 2 + 2 + 2 + 2 = 8 horizontal steps (total 19), and Otto takes "
+            "2 + 3 + 3 + 2 = 10 horizontal steps (total 21). Otto has the longest path (21 steps), so Otto is last.",
+        ),
+        # Practice .5: Ruby = 21, Sam = 17, Toby = 19 -> Shortest path length = 17 m (Answer: C)
+        (
+            ["Ruby", "Sam", "Toby"],
+            [
+                # Ruby: 11 vertical + (2+3+3+2)=10 horizontal = 21
+                [(2, 0), (2, 2), (0, 2), (0, 5), (3, 5), (3, 8), (0, 8), (0, 10), (2, 10), (2, 11)],
+                # Sam: 11 vertical + (1+2+2+1)=6 horizontal = 17
+                [(6, 0), (6, 3), (7, 3), (7, 6), (5, 6), (5, 9), (7, 9), (7, 10), (6, 10), (6, 11)],
+                # Toby: 11 vertical + (2+2+2+2)=8 horizontal = 19
+                [(11, 0), (11, 2), (13, 2), (13, 5), (11, 5), (11, 7), (9, 7), (9, 9), (11, 9), (11, 11)],
+            ],
+            [21, 17, 19],
+            ["15 m", "16 m", "17 m", "19 m", "21 m"],
+            2,
+            5,
+            "Three kangaroos — Ruby, Sam, and Toby — jump from the bottom to the top along the paths shown on the grid, "
+            "where each small grid square has a side of 1 m. What is the total length of the <b>shortest</b> path?",
+            "Every kangaroo travels 11 m upward. Counting horizontal steps: Ruby travels 2 + 3 + 3 + 2 = 10 m horizontally "
+            "(total 11 + 10 = 21 m), Sam travels 1 + 2 + 2 + 1 = 6 m horizontally (total 11 + 6 = 17 m), and Toby travels "
+            "2 + 2 + 2 + 2 = 8 m horizontally (total 11 + 8 = 19 m). The shortest path is Sam's path at 17 m.",
+        ),
+    ]
+
+    for idx, (names, paths, exp_lens, opts, ans_idx, cols, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_zigzag_race(paths, exp_lens, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            fig_zigzag_race(names, paths),
+            "right",
+            opts,
+            choice_cols=cols,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
 # Registry of dedicated per-question implementations.
 # Every new (year, number) MUST be implemented as its own q_<year>_<num>(d, key, set_num) method!
 QUESTIONS = {
@@ -2190,6 +2882,9 @@ QUESTIONS = {
     (2002, 6): q_2002_6,
     (2002, 7): q_2002_7,
     (2002, 9): q_2002_9,
+    (2002, 10): q_2002_10,
+    (2002, 11): q_2002_11,
+    (2002, 12): q_2002_12,
     (2003, 9): q_2003_9,
     (2003, 12): q_2003_12,
     (2003, 14): q_2003_14,
@@ -2200,8 +2895,10 @@ QUESTIONS = {
     (2007, 14): q_2007_14,
 }
 
+NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six"}
 
-def generate_set(selected_questions, out_pdf, subtitle, include_orig=True, out_key_pdf=None):
+
+def generate_set(selected_questions, out_pdf, subtitle, include_orig=True, out_key_pdf=None, num_practice=3):
     missing = [q for q in selected_questions if q not in QUESTIONS]
     if missing:
         raise NotImplementedError(
@@ -2214,17 +2911,24 @@ def generate_set(selected_questions, out_pdf, subtitle, include_orig=True, out_k
     c.drawCentredString(PW / 2, PH - 70, "Math Kangaroo Practice - Grades 3-4")
     c.setFont("Helvetica", 11)
     c.drawCentredString(PW / 2, PH - 90, subtitle)
+    nw = NUM_WORDS.get(num_practice, str(num_practice))
     note = (
-        "Each original problem is followed by three similar practice problems."
+        f"Each original problem is followed by {nw} similar practice problems."
         if include_orig
-        else "Three practice problems per selected problem."
+        else f"{nw.capitalize()} practice problems per selected problem."
     )
     c.drawCentredString(PW / 2, PH - 105, note)
     d.y = PH - 130
     key = []
 
+    import inspect
     for idx, q_id in enumerate(selected_questions, start=1):
-        QUESTIONS[q_id](d, key, set_num=idx, include_orig=include_orig)
+        fn = QUESTIONS[q_id]
+        sig = inspect.signature(fn)
+        if "num_practice" in sig.parameters:
+            fn(d, key, set_num=idx, include_orig=include_orig, num_practice=num_practice)
+        else:
+            fn(d, key, set_num=idx, include_orig=include_orig)
 
     # Append answer key on the last page(s)
     append_answer_key(d, key, subtitle=f"For {out_pdf} ({subtitle})")
@@ -2262,6 +2966,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Omit original contest problems, generating only practice problems.",
     )
+    parser.add_argument(
+        "--num-practice",
+        type=int,
+        default=3,
+        help="Number of practice problems per original question (default: 3).",
+    )
     args = parser.parse_args()
 
     if args.out:
@@ -2283,6 +2993,9 @@ if __name__ == "__main__":
             out_pdf,
             f"Practice set for {desc}",
             include_orig=include_orig,
+            num_practice=args.num_practice,
         )
     else:
         build(out_pdf)
+
+

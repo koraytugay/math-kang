@@ -119,7 +119,7 @@ Verify:
 
 ## 4. Currently Implemented Questions in `generate_practice.py`
 
-The following 13 questions are currently implemented:
+The following 16 questions are currently implemented:
 
 | Question ID | Function in `generate_practice.py` | Description |
 |---|---|---|
@@ -128,6 +128,9 @@ The following 13 questions are currently implemented:
 | `(2002, 6)` | `q_2002_6(d, key, set_num, include_orig=True)` | Square and rectangle perimeters (perimeter difference) |
 | `(2002, 7)` | `q_2002_7(d, key, set_num, include_orig=True)` | Castle skyline contour — which piece cannot belong |
 | `(2002, 9)` | `q_2002_9(d, key, set_num, include_orig=True)` | Tilted/level two-pan balance scale with fruits |
+| `(2002, 10)` | `q_2002_10(d, key, set_num, include_orig=True, num_practice=5)` | Digit occurrences in sequential house/page/locker numbers |
+| `(2002, 11)` | `q_2002_11(d, key, set_num, include_orig=True, num_practice=5)` | Cracked clock face (1–12) partitioned into pieces with consecutive/target sums |
+| `(2002, 12)` | `q_2002_12(d, key, set_num, include_orig=True, num_practice=5)` | Kangaroo zigzag run on a dashed grid — comparing path lengths |
 | `(2003, 9)` | `q_2003_9(d, key, set_num, include_orig=True)` | 3D W×H×D brick of cubes (red outside, blue inside) |
 | `(2003, 12)` | `q_2003_12(d, key, set_num, include_orig=True)` | 2D paper net of a house folded into 3D isometric houses A–E |
 | `(2003, 14)` | `q_2003_14(d, key, set_num, include_orig=True)` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
