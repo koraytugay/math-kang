@@ -28,19 +28,19 @@ and any new PDFs the user adds over time).
 When the user specifies questions (via `PROMPT_TEMPLATE.md` or directly in chat, e.g.
 `2002: 4, 7, 9` and `2003: 9, 12, 14`), you must:
 
-1. Check which of the requested `(year, number)` questions already have a dedicated `q_<year>_<number>` method
-   in `generate_practice.py`, and which ones are **new (not yet implemented)**.
+1. Check `QUESTIONS_INDEX.md` (and `QUESTIONS` in `generate_practice.py`) to see which of the requested `(year, number)` questions already have a dedicated `q_<year>_<number>` method, and which ones are **new (not yet implemented)**.
 2. For every **new** question:
    - Extract the text and render a high-DPI crop of that specific question from `<year>.pdf`.
    - Visually inspect the image carefully (count every grid line, cube, shape, etc.) and solve the original problem.
-   - Write a **brand-new dedicated method `q_<year>_<number>(d, key)`** (plus its own bespoke drawing and
-     answer-checking helper functions) specifically for that question.
+   - Write a **brand-new dedicated method `q_<year>_<number>(d, key, set_num, include_orig=True, num_practice=...)`** (plus its own bespoke drawing and answer-checking helper functions) specifically for that question.
+   - **Update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md`** so the new question is listed in the index and guide.
 3. Generate **a brand-new worksheet PDF for every request in the `generated/` folder**:
    - **Never amend or overwrite existing generated files.** Every time questions are requested, generate a completely new worksheet PDF.
    - **Keep the repository root clean:** All generated worksheet PDFs must be stored inside the `generated/` directory (e.g. `generated/YYYY-MM-DD-HH-MM-SS.pdf`).
    - Name each generated PDF using the current timestamp in the format `generated/YYYY-MM-DD-HH-MM-SS.pdf` (e.g. `generated/2026-10-19-12-14-56.pdf`), unless the user explicitly requested a custom filename.
    - The PDF contains the problems on the initial page(s), followed by the **Answer Key & Explanations on the final page(s)** (always starting on a fresh new page at the very end).
    - Do **NOT** generate a separate answer key file.
+4. **Commit and push** all updated/created files (`generate_practice.py`, `QUESTIONS_INDEX.md`, `AGENT_GUIDE.md`, and the new `generated/*.pdf`).
 
 ---
 
@@ -81,14 +81,14 @@ View the cropped image. Count every grid cell, segment, cube, shading, or label.
 
 ### Step 3: Solve the original problem and design the practice variations
 - There is **no official answer key** in the source PDFs. Solve the original problem carefully and double-check.
-- Design the requested number of practice problems (default 3) specifically around this question's exact concept:
+- Design the requested number of practice problems (default 3, or 5 when `--num-practice 5` is requested) specifically around this question's exact concept:
   - Keep the exact same mathematical/visual mechanism, changing the numbers, shapes, or story.
   - Spread the correct answers across different letters (`A`–`E`).
   - Make wrong choices plausible and **assert in code** that there is **only one** valid answer.
   - The final practice variation in a set can include a fun small twist (e.g., asking for the complement).
 
-### Step 4: Implement a dedicated `q_<year>_<num>(d, key, set_num)` method
-Write bespoke helper functions and a dedicated `q_<year>_<num>(d, key, set_num)` function in
+### Step 4: Implement a dedicated `q_<year>_<num>(d, key, set_num, include_orig=True, num_practice=...)` method
+Write bespoke helper functions and a dedicated `q_<year>_<num>` function in
 `generate_practice.py` (and register it in `QUESTIONS[(year, num)]`).
 
 What `generate_practice.py` provides for **page layout only**:
@@ -115,9 +115,17 @@ Verify:
 3. No watermarks ("DO NOT COPY" must never appear — never paste bitmap crops from the source PDF).
 4. Problem pages contain **no answers**, and the final page(s) contain the full answer key with clear, kid-friendly explanations.
 
+### Step 6: Update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md`, then commit & push
+Whenever you implement one or more new questions:
+1. Update **`QUESTIONS_INDEX.md`** (both the *Quick Summary by Year* table and the *Detailed Index by Year* table).
+2. Update the table in Section 4 of **`AGENT_GUIDE.md`** below.
+3. Stage, commit, and push all changes (`generate_practice.py`, `QUESTIONS_INDEX.md`, `AGENT_GUIDE.md`, and the new PDF in `generated/`).
+
 ---
 
-## 4. Currently Implemented Questions in `generate_practice.py`
+## 4. Currently Implemented Questions (`QUESTIONS_INDEX.md` & `generate_practice.py`)
+
+See **`QUESTIONS_INDEX.md`** for the full user-facing index (including quick summary of implemented vs. remaining question numbers per year).
 
 The following 16 questions are currently implemented:
 
@@ -140,12 +148,12 @@ The following 16 questions are currently implemented:
 | `(2007, 10)` | `q_2007_10(d, key, set_num, include_orig=True)` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
 | `(2007, 14)` | `q_2007_14(d, key, set_num, include_orig=True)` | 3D cube aquarium (3×3×3) — counting 1 dm cubes inside / missing to fill |
 
-**Any other `(year, number)` requested by the user is NEW** — you must inspect the source PDF and implement
-a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True)` function for it!
+**Any other `(year, number)` requested by the user is NEW** — you must inspect the source PDF, implement
+a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True, num_practice=...)` function for it, and add it to both `QUESTIONS_INDEX.md` and the table above!
 
 ---
 
-## 5. Hard Lessons from Runs #1 and #2 (Do Not Repeat)
+## 5. Hard Lessons from Previous Runs (Do Not Repeat)
 
 1. **Always reset canvas colors:** In ReportLab, setting `c.setFillColor(colors.white)` or light gray stays active until changed.
    Every custom `draw(c, x, y)` function **must** end with `c.setFillColor(colors.black)` and
@@ -157,4 +165,5 @@ a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True)` function
    append the answer key starting on a fresh new page at the very end of the worksheet PDF.
 5. **Always create a new timestamped file in `generated/`:** Never amend or overwrite previous worksheet PDFs. Every time questions are requested,
    generate a fresh PDF inside `generated/` named with the current timestamp `generated/YYYY-MM-DD-HH-MM-SS.pdf` to keep the root clean.
-6. **Support `include_orig=False` (`--no-include-orig`):** When the user sets `Include original problems: no`, pass `--no-include-orig`. Every `q_<year>_<num>` method must support `include_orig=True` and omit the contest problem from both the worksheet and the answer key when `include_orig=False`.
+6. **Support `include_orig=False` (`--no-include-orig`) and `--num-practice`:** When the user sets `Include original problems: no`, pass `--no-include-orig`. Every `q_<year>_<num>` method must support `include_orig=True` and omit the contest problem from both the worksheet and the answer key when `include_orig=False`.
+7. **Always keep `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md` updated, and commit & push:** Whenever you implement a new question, immediately update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md`, then `git add`, `git commit`, and `git push`.
