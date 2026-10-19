@@ -119,36 +119,39 @@ Verify:
 
 ## 4. Currently Implemented Questions in `generate_practice.py`
 
-Only the following 9 questions have been implemented so far:
+The following 13 questions are currently implemented:
 
 | Question ID | Function in `generate_practice.py` | Description |
 |---|---|---|
-| `(2002, 4)` | `q_2002_4(d, key, set_num)` | 4×4 / 5×5 square cut along grid lines into polyomino pieces |
-| `(2002, 7)` | `q_2002_7(d, key, set_num)` | Castle skyline contour — which piece cannot belong |
-| `(2002, 9)` | `q_2002_9(d, key, set_num)` | Tilted/level two-pan balance scale with fruits |
-| `(2003, 9)` | `q_2003_9(d, key, set_num)` | 3D W×H×D brick of cubes (red outside, blue inside) |
-| `(2003, 12)` | `q_2003_12(d, key, set_num)` | 2D paper net of a house folded into 3D isometric houses A–E |
-| `(2003, 14)` | `q_2003_14(d, key, set_num)` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
-| `(2007, 1)` | `q_2007_1(d, key, set_num)` | Forking road diagram — choosing one number/letter per road split |
-| `(2007, 10)` | `q_2007_10(d, key, set_num)` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
-| `(2007, 14)` | `q_2007_14(d, key, set_num)` | 3D cube aquarium (3×3×3) — counting 1 dm cubes inside / missing to fill |
+| `(2002, 1)` | `q_2002_1(d, key, set_num, include_orig=True)` | Grid puzzle / picture tile — finding the missing square tile |
+| `(2002, 4)` | `q_2002_4(d, key, set_num, include_orig=True)` | 4×4 / 5×5 square cut along grid lines into polyomino pieces |
+| `(2002, 6)` | `q_2002_6(d, key, set_num, include_orig=True)` | Square and rectangle perimeters (perimeter difference) |
+| `(2002, 7)` | `q_2002_7(d, key, set_num, include_orig=True)` | Castle skyline contour — which piece cannot belong |
+| `(2002, 9)` | `q_2002_9(d, key, set_num, include_orig=True)` | Tilted/level two-pan balance scale with fruits |
+| `(2003, 9)` | `q_2003_9(d, key, set_num, include_orig=True)` | 3D W×H×D brick of cubes (red outside, blue inside) |
+| `(2003, 12)` | `q_2003_12(d, key, set_num, include_orig=True)` | 2D paper net of a house folded into 3D isometric houses A–E |
+| `(2003, 14)` | `q_2003_14(d, key, set_num, include_orig=True)` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
+| `(2003, 18)` | `q_2003_18(d, key, set_num, include_orig=True)` | Covering an empty shape on a square grid using two polyomino pieces |
+| `(2007, 1)` | `q_2007_1(d, key, set_num, include_orig=True)` | Forking road diagram — choosing one number/letter per road split |
+| `(2007, 8)` | `q_2007_8(d, key, set_num, include_orig=True)` | Joining a piece with the given shape to form a solid rectangle |
+| `(2007, 10)` | `q_2007_10(d, key, set_num, include_orig=True)` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
+| `(2007, 14)` | `q_2007_14(d, key, set_num, include_orig=True)` | 3D cube aquarium (3×3×3) — counting 1 dm cubes inside / missing to fill |
 
 **Any other `(year, number)` requested by the user is NEW** — you must inspect the source PDF and implement
-a new dedicated `q_<year>_<number>(d, key, set_num)` function for it!
+a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True)` function for it!
 
 ---
 
-## 5. Hard Lessons from Run #1 (Do Not Repeat)
+## 5. Hard Lessons from Runs #1 and #2 (Do Not Repeat)
 
-1. **Always reset canvas colors:** In ReportLab, setting `c.setFillColor(colors.white)` stays active until changed.
+1. **Always reset canvas colors:** In ReportLab, setting `c.setFillColor(colors.white)` or light gray stays active until changed.
    Every custom `draw(c, x, y)` function **must** end with `c.setFillColor(colors.black)` and
-   `c.setStrokeColor(colors.black)` or the next problem's text will be invisible!
-2. **Write a programmatic checker for every question:** In Run #1, an option tuple for `2003 #12` had its arguments
-   swapped, and `check_house` caught it immediately. Always write an `assert` that verifies the math/geometry of
-   your question and its options.
-3. **Check figure scale visually:** In Run #1, the house net was initially too small (`s=19`) to read the window/door
-   markings clearly and had to be bumped to `s=27`. Always inspect the rendered PNGs of your output PDF.
+   `c.setStrokeColor(colors.black)` or subsequent text and problem headers will be drawn in the wrong color or invisible!
+2. **Write a programmatic checker for every question:** Always write an `assert` / solver function that verifies
+   the math and geometry of your question and confirms only one answer choice is valid.
+3. **Check figure scale and layout visually:** Always render output PDF pages to PNGs in `scratch/` and inspect them with `view_file`.
 4. **Answer key is ALWAYS on the last page of the PDF:** Never generate a separate answer key PDF file. Always
    append the answer key starting on a fresh new page at the very end of the worksheet PDF.
 5. **Always create a new timestamped file in `generated/`:** Never amend or overwrite previous worksheet PDFs. Every time questions are requested,
    generate a fresh PDF inside `generated/` named with the current timestamp `generated/YYYY-MM-DD-HH-MM-SS.pdf` to keep the root clean.
+6. **Support `include_orig=False` (`--no-include-orig`):** When the user sets `Include original problems: no`, pass `--no-include-orig`. Every `q_<year>_<num>` method must support `include_orig=True` and omit the contest problem from both the worksheet and the answer key when `include_orig=False`.

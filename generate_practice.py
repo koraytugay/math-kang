@@ -131,10 +131,14 @@ def option_row(items, gap=18, label_h=14):
     def draw(c, x, y):
         cx = x
         for k, (iw, ih, fn) in enumerate(items):
+            c.setFillColor(colors.black)
+            c.setStrokeColor(colors.black)
             c.setFont("Helvetica-Bold", 11)
             c.drawString(cx, y + h - 11, LETTERS[k] + ")")
             fn(c, cx + 16, y + (h - label_h - ih) / 2)
             cx += iw + 16 + gap
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
     return w, h, draw
 
 
@@ -524,14 +528,263 @@ def write_answer_key(path, title, subtitle, key):
     print("wrote", path)
 
 
-def q_2002_4(d, key, set_num=1):
+# ------------------------------------------------- 2002 #1: Kangaroo grid puzzle
+def fig_tile(strokes, s=26):
+    """Draw a single square tile of size s with strokes."""
+    w = h = s
+
+    def draw(c, x, y):
+        c.setLineWidth(1.0)
+        c.setStrokeColor(colors.black)
+        c.rect(x, y, s, s, stroke=1, fill=0)
+        c.setLineWidth(1.5)
+        for kind, pts in strokes:
+            if kind == "line":
+                (x1, y1), (x2, y2) = pts
+                c.line(x + x1 * s, y + y1 * s, x + x2 * s, y + y2 * s)
+            elif kind == "curve":
+                (x1, y1), (cx1, cy1), (cx2, cy2), (x2, y2) = pts
+                p = c.beginPath()
+                p.moveTo(x + x1 * s, y + y1 * s)
+                p.curveTo(x + cx1 * s, y + cy1 * s, x + cx2 * s, y + cy2 * s, x + x2 * s, y + y2 * s)
+                c.drawPath(p, stroke=1, fill=0)
+    return w, h, draw
+
+
+def fig_tile_grid(n_rows, n_cols, cell_strokes, missing_rc, s=26):
+    """Draw a grid of tiles where missing_rc is dashed with a question mark."""
+    w = n_cols * s
+    h = n_rows * s
+
+    def draw(c, x, y):
+        top = y + h
+        for r in range(n_rows):
+            for col in range(n_cols):
+                cx = x + col * s
+                cy = top - (r + 1) * s
+                if (r, col) == missing_rc:
+                    c.setLineWidth(1.0)
+                    c.setStrokeColor(colors.black)
+                    c.setDash(2, 2)
+                    c.rect(cx, cy, s, s, stroke=1, fill=0)
+                    c.setDash([])
+                    c.setFont("Helvetica-Bold", 14)
+                    c.drawCentredString(cx + s / 2, cy + s / 2 - 5, "?")
+                else:
+                    c.setLineWidth(0.8)
+                    c.setStrokeColor(colors.black)
+                    c.rect(cx, cy, s, s, stroke=1, fill=0)
+                    strokes = cell_strokes.get((r, col), [])
+                    c.setLineWidth(1.5)
+                    for kind, pts in strokes:
+                        if kind == "line":
+                            (x1, y1), (x2, y2) = pts
+                            c.line(cx + x1 * s, cy + y1 * s, cx + x2 * s, cy + y2 * s)
+                        elif kind == "curve":
+                            (x1, y1), (cx1, cy1), (cx2, cy2), (x2, y2) = pts
+                            p = c.beginPath()
+                            p.moveTo(cx + x1 * s, cy + y1 * s)
+                            p.curveTo(cx + cx1 * s, cy + cy1 * s, cx + cx2 * s, cy + cy2 * s, cx + x2 * s, cy + y2 * s)
+                            c.drawPath(p, stroke=1, fill=0)
+    return w, h, draw
+
+
+def check_missing_tile(tile_opts, correct_idx, top_conn, bot_conn, left_conn, right_conn):
+    results = []
+    for opt in tile_opts:
+        ok = (
+            opt.get("top", []) == top_conn
+            and opt.get("bot", []) == bot_conn
+            and opt.get("left", []) == left_conn
+            and opt.get("right", []) == right_conn
+        )
+        results.append(ok)
+    assert results[correct_idx] is True
+    matches = [i for i, r in enumerate(results) if r]
+    assert matches == [correct_idx], f"Expected unique match {correct_idx}, got {matches}"
+
+
+def q_2002_1(d, key, set_num=1, include_orig=True):
+    d.heading(f"Set {set_num} - Missing puzzle tile", "Based on 2002, Problem 1")
+
+    # Original 2002 #1
+    t0_meta = [
+        {"left": [0.5], "right": [0.8]},
+        {"top": [0.2], "left": [0.5]},
+        {"top": [0.2, 0.8], "right": [0.5]},
+        {"top": [0.2, 0.5], "bot": [0.5]},
+        {"left": [0.3], "bot": [0.7]},
+    ]
+    check_missing_tile(t0_meta, 3, [0.2, 0.5], [0.5], [], [])
+
+    if include_orig:
+        grid0 = {
+            (0, 3): [("curve", ((0.1, 0.9), (0.1, 0.4), (0.2, 0.2), (0.2, 0.0))),
+                     ("curve", ((0.7, 0.8), (0.6, 0.4), (0.5, 0.2), (0.5, 0.0)))],
+            (2, 3): [("line", ((0.5, 1.0), (0.5, 0.0)))],
+            (1, 2): [("curve", ((0.2, 0.7), (0.5, 0.7), (0.8, 0.5), (1.0, 0.5)))],
+            (2, 2): [("curve", ((0.3, 0.9), (0.4, 0.5), (0.5, 0.3), (0.7, 0.0)))],
+            (2, 1): [("line", ((0.0, 0.2), (1.0, 0.2)))],
+            (2, 0): [("curve", ((1.0, 0.2), (0.6, 0.2), (0.3, 0.4), (0.1, 0.7)))],
+        }
+        opt0_strokes = [
+            [("line", ((0.0, 0.5), (1.0, 0.8)))],
+            [("curve", ((0.2, 1.0), (0.2, 0.6), (0.1, 0.5), (0.0, 0.5)))],
+            [("line", ((0.2, 1.0), (1.0, 0.5))), ("line", ((0.8, 1.0), (1.0, 0.5)))],
+            [("curve", ((0.2, 1.0), (0.2, 0.5), (0.5, 0.5), (0.5, 0.0))),
+             ("line", ((0.5, 1.0), (0.5, 0.5)))],
+            [("curve", ((0.0, 0.3), (0.4, 0.3), (0.7, 0.3), (0.7, 0.0)))],
+        ]
+        fig0 = vstack([
+            fig_tile_grid(3, 4, grid0, (1, 3), s=28),
+            option_row([fig_tile(s, s=28) for s in opt0_strokes], gap=16),
+        ], gap=12)
+        d.problem(
+            "Original 2002 #1.",
+            "Which of the squares below is missing from the picture of the kangaroo?",
+            fig0,
+            "below",
+        )
+        key.append((
+            "2002 #1",
+            "D",
+            "Looking at the grid, the neck lines enter the missing square from the top at two points, "
+            "and the leg continues down through the bottom edge. Tile D is the only square with two lines at the top "
+            "and one line at the bottom connecting to the kangaroo's body.",
+        ))
+
+    # Practice 1.1: 3x3 grid track, missing center tile (1, 1). Enters top at 0.5, exits right at 0.5.
+    t1_meta = [
+        {"top": [0.5], "bot": [0.5]},
+        {"top": [0.5], "right": [0.5]},
+        {"left": [0.5], "right": [0.5]},
+        {"left": [0.5], "bot": [0.5]},
+        {"top": [0.5], "left": [0.5]},
+    ]
+    check_missing_tile(t1_meta, 1, [0.5], [], [], [0.5])
+    grid1 = {
+        (0, 1): [("line", ((0.5, 1.0), (0.5, 0.0)))],
+        (1, 2): [("curve", ((0.0, 0.5), (0.4, 0.5), (0.5, 0.3), (0.5, 0.0)))],
+        (2, 2): [("curve", ((0.5, 1.0), (0.5, 0.5), (0.3, 0.2), (0.0, 0.2)))],
+        (2, 1): [("line", ((1.0, 0.2), (0.0, 0.2)))],
+        (2, 0): [("curve", ((1.0, 0.2), (0.5, 0.2), (0.2, 0.4), (0.2, 1.0)))],
+        (1, 0): [("line", ((0.2, 0.0), (0.2, 1.0)))],
+    }
+    opt1_strokes = [
+        [("line", ((0.5, 1.0), (0.5, 0.0)))],
+        [("curve", ((0.5, 1.0), (0.5, 0.5), (0.8, 0.5), (1.0, 0.5)))],
+        [("line", ((0.0, 0.5), (1.0, 0.5)))],
+        [("curve", ((0.0, 0.5), (0.3, 0.5), (0.5, 0.3), (0.5, 0.0)))],
+        [("curve", ((0.5, 1.0), (0.5, 0.6), (0.3, 0.5), (0.0, 0.5)))],
+    ]
+    fig1 = vstack([
+        fig_tile_grid(3, 3, grid1, (1, 1), s=28),
+        option_row([fig_tile(s, s=28) for s in opt1_strokes], gap=16),
+    ], gap=12)
+    d.problem(
+        f"Practice {set_num}.1",
+        "A train track runs across the grid below. Which tile belongs in the empty square marked with a question mark (?) "
+        "to complete the continuous track?",
+        fig1,
+        "below",
+    )
+    key.append((
+        f"{set_num}.1",
+        "B",
+        "The track enters the empty square from the top at the center and continues out to the right. "
+        "Tile B contains the curved track connecting the top edge to the right edge.",
+    ))
+
+    # Practice 1.2: 4x3 grid, missing tile (1, 2). Enters left at 0.5, exits bottom at 0.5.
+    t2_meta = [
+        {"top": [0.5], "right": [0.5]},
+        {"left": [0.5], "right": [0.5]},
+        {"top": [0.5], "bot": [0.5]},
+        {"left": [0.5], "bot": [0.5]},
+        {"top": [0.5], "left": [0.5]},
+    ]
+    check_missing_tile(t2_meta, 3, [], [0.5], [0.5], [])
+    grid2 = {
+        (1, 0): [("line", ((0.0, 0.5), (1.0, 0.5)))],
+        (1, 1): [("line", ((0.0, 0.5), (1.0, 0.5)))],
+        (2, 2): [("curve", ((0.5, 1.0), (0.5, 0.5), (0.8, 0.5), (1.0, 0.5)))],
+        (2, 3): [("line", ((0.0, 0.5), (1.0, 0.5)))],
+    }
+    opt2_strokes = [
+        [("curve", ((0.5, 1.0), (0.5, 0.5), (0.8, 0.5), (1.0, 0.5)))],
+        [("line", ((0.0, 0.5), (1.0, 0.5)))],
+        [("line", ((0.5, 1.0), (0.5, 0.0)))],
+        [("curve", ((0.0, 0.5), (0.4, 0.5), (0.5, 0.3), (0.5, 0.0)))],
+        [("curve", ((0.5, 1.0), (0.5, 0.6), (0.3, 0.5), (0.0, 0.5)))],
+    ]
+    fig2 = vstack([
+        fig_tile_grid(3, 4, grid2, (1, 2), s=28),
+        option_row([fig_tile(s, s=28) for s in opt2_strokes], gap=16),
+    ], gap=12)
+    d.problem(
+        f"Practice {set_num}.2",
+        "A pipe connects across the grid. Which tile is missing at the question mark (?) "
+        "to connect the left pipe to the bottom pipe?",
+        fig2,
+        "below",
+    )
+    key.append((
+        f"{set_num}.2",
+        "D",
+        "The incoming pipe comes from the left at the middle, and exits through the bottom edge at the middle. "
+        "Tile D correctly turns the pipe from left to bottom.",
+    ))
+
+    # Practice 1.3: 3x3 grid crossing tracks, missing center tile (1, 1). Crossing (top-bot and left-right).
+    t3_meta = [
+        {"top": [0.5], "bot": [0.5]},
+        {"left": [0.5], "right": [0.5]},
+        {"top": [0.5], "bot": [0.5], "left": [0.5], "right": [0.5]},
+        {"top": [0.5], "right": [0.5]},
+        {"bot": [0.5], "left": [0.5]},
+    ]
+    check_missing_tile(t3_meta, 2, [0.5], [0.5], [0.5], [0.5])
+    grid3 = {
+        (0, 1): [("line", ((0.5, 1.0), (0.5, 0.0)))],
+        (2, 1): [("line", ((0.5, 1.0), (0.5, 0.0)))],
+        (1, 0): [("line", ((0.0, 0.5), (1.0, 0.5)))],
+        (1, 2): [("line", ((0.0, 0.5), (1.0, 0.5)))],
+    }
+    opt3_strokes = [
+        [("line", ((0.5, 1.0), (0.5, 0.0)))],
+        [("line", ((0.0, 0.5), (1.0, 0.5)))],
+        [("line", ((0.5, 1.0), (0.5, 0.0))), ("line", ((0.0, 0.5), (1.0, 0.5)))],
+        [("curve", ((0.5, 1.0), (0.5, 0.5), (0.8, 0.5), (1.0, 0.5)))],
+        [("curve", ((0.5, 0.0), (0.5, 0.4), (0.3, 0.5), (0.0, 0.5)))],
+    ]
+    fig3 = vstack([
+        fig_tile_grid(3, 3, grid3, (1, 1), s=28),
+        option_row([fig_tile(s, s=28) for s in opt3_strokes], gap=16),
+    ], gap=12)
+    d.problem(
+        f"Practice {set_num}.3",
+        "Two roads cross each other on the map below: one road runs vertically and the other runs horizontally. "
+        "Which tile belongs in the empty square marked with a question mark (?) so both roads can continue across the square?",
+        fig3,
+        "below",
+    )
+    key.append((
+        f"{set_num}.3",
+        "C",
+        "Both the vertical road (top to bottom) and the horizontal road (left to right) pass through the missing square. "
+        "Tile C shows the intersection of both roads.",
+    ))
+
+
+def q_2002_4(d, key, set_num=1, include_orig=True):
     d.heading(f"Set {set_num} - Cutting a square into pieces", "Based on 2002, Problem 4")
-    orig = ["AABD", "ABBD", "CCBF", "EFFF"]
-    opts = [[(0, 0)], [(0, 0), (0, 1)], [(0, 0), (0, 1), (1, 1)],
-            [(0, 0), (0, 1), (0, 2), (1, 0), (1, 2)], [(0, 0), (1, 0), (2, 0), (2, 1)]]
-    d.problem("Original 2002 #4.", "The square was cut along the lines. Which of the shapes below was "
-              "<b>not</b> obtained this way?", cut_problem(orig, opts, 3), "below")
-    key.append(("2002 #4", "D", "The pieces are: 1 small square, 2 dominoes, an L of 3, a T of 4 and an L of 4. There is no U-shaped piece."))
+    if include_orig:
+        orig = ["AABD", "ABBD", "CCBF", "EFFF"]
+        opts = [[(0, 0)], [(0, 0), (0, 1)], [(0, 0), (0, 1), (1, 1)],
+                [(0, 0), (0, 1), (0, 2), (1, 0), (1, 2)], [(0, 0), (1, 0), (2, 0), (2, 1)]]
+        d.problem("Original 2002 #4.", "The square was cut along the lines. Which of the shapes below was "
+                  "<b>not</b> obtained this way?", cut_problem(orig, opts, 3), "below")
+        key.append(("2002 #4", "D", "The pieces are: 1 small square, 2 dominoes, an L of 3, a T of 4 and an L of 4. There is no U-shaped piece."))
 
     g = ["AAAB", "CDAB", "CDDD", "CEEF"]
     o = [[(0, 0)], [(0, 0), (0, 1), (0, 2), (1, 1)], [(0, 0), (0, 1), (0, 2)],
@@ -555,20 +808,163 @@ def q_2002_4(d, key, set_num=1):
     key.append((f"{set_num}.3", "E", "Pieces: three L-shapes of 4, one T, two L-shapes of 3, one straight 3. No 2x2 square."))
 
 
-def q_2002_7(d, key, set_num=2):
+# ------------------------------------------------- 2002 #6: Square vs rectangle perimeter
+def fig_square_rect(s1_val, s2_val, label_s1, label_s2=None, label_mb=None, size=95):
+    w = size + 45
+    h = size + 25
+    cut_ratio = s2_val / s1_val
+
+    def draw(c, x, y):
+        ox = x + 25
+        oy = y + 12
+        sw = size
+        sh = size
+        mx = ox + cut_ratio * sw
+
+        # Light gray fill for AMTD rectangle
+        c.setFillColor(colors.Color(0.88, 0.88, 0.88))
+        c.rect(ox, oy, cut_ratio * sw, sh, stroke=0, fill=1)
+
+        # Draw square border and dividing line MT
+        c.setLineWidth(1.4)
+        c.setStrokeColor(colors.black)
+        c.rect(ox, oy, sw, sh, stroke=1, fill=0)
+        c.setLineWidth(1.2)
+        c.line(mx, oy, mx, oy + sh)
+
+        # Labels for vertices A, B, C, D, M, T
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(ox - 10, oy - 9, "A")
+        c.drawString(ox + sw + 3, oy - 9, "B")
+        c.drawString(ox + sw + 3, oy + sh + 3, "C")
+        c.drawString(ox - 10, oy + sh + 3, "D")
+        c.drawString(mx - 4, oy - 10, "M")
+        c.drawString(mx - 3, oy + sh + 3, "T")
+
+        # Dimension labels
+        c.setFont("Helvetica", 9)
+        c.drawCentredString(ox - 16, oy + sh / 2 - 3, label_s1)
+        if label_s2:
+            c.drawCentredString(ox + (cut_ratio * sw) / 2, oy + sh + 4, label_s2)
+        if label_mb:
+            c.drawCentredString(mx + ((1 - cut_ratio) * sw) / 2, oy - 10, label_mb)
+
+    return w, h, draw
+
+
+def check_square_rect_diff(s1, s2, opts, correct_idx, twist_mb=None):
+    if twist_mb is not None:
+        am = s1 - twist_mb
+        diff = 2 * (s1 - am)
+    else:
+        diff = 2 * (s1 - s2)
+    assert opts[correct_idx] == diff, f"Expected {diff}, got {opts[correct_idx]}"
+    matches = [i for i, v in enumerate(opts) if v == diff]
+    assert matches == [correct_idx], f"Multiple matches: {matches}"
+
+
+def q_2002_6(d, key, set_num=2, include_orig=True):
+    d.heading(f"Set {set_num} - Square and rectangle perimeters", "Based on 2002, Problem 6")
+
+    # Original 2002 #6: s1=10, s2=3. Perimeter diff = 4(10) - 2(10+3) = 40 - 26 = 14 cm.
+    opts0 = [14, 10, 7, 6, 4]
+    check_square_rect_diff(10, 3, opts0, 0)
+    if include_orig:
+        fig0 = fig_square_rect(10, 3, "10 cm", label_s2="3 cm")
+        d.problem(
+            "Original 2002 #6.",
+            "The side of the square <i>ABCD</i> is 10 cm. The side <i>AM</i> of the rectangle <i>AMTD</i> is 3 cm. "
+            "How much greater is the perimeter of the square than the perimeter of the rectangle <i>AMTD</i>?",
+            fig0,
+            "right",
+            [f"{v} cm" for v in opts0],
+            choice_cols=5,
+        )
+        key.append((
+            "2002 #6",
+            "A",
+            "Perimeter of square ABCD = 4 × 10 = 40 cm. Perimeter of rectangle AMTD = 2 × (10 + 3) = 26 cm. "
+            "Difference = 40 - 26 = 14 cm (or simply 2 × MB = 2 × 7 = 14 cm).",
+        ))
+
+    # Practice 2.1: s1=12, s2=4. Diff = 2*(12-4) = 16 cm. Answer: B (16 cm)
+    opts1 = [10, 16, 18, 20, 24]
+    check_square_rect_diff(12, 4, opts1, 1)
+    fig1 = fig_square_rect(12, 4, "12 cm", label_s2="4 cm")
+    d.problem(
+        f"Practice {set_num}.1",
+        "The side of square <i>ABCD</i> is 12 cm. The side <i>AM</i> of rectangle <i>AMTD</i> is 4 cm. "
+        "How much greater is the perimeter of square <i>ABCD</i> than the perimeter of rectangle <i>AMTD</i>?",
+        fig1,
+        "right",
+        [f"{v} cm" for v in opts1],
+        choice_cols=5,
+    )
+    key.append((
+        f"{set_num}.1",
+        "B",
+        "Perimeter of square ABCD = 4 × 12 = 48 cm. Perimeter of rectangle AMTD = 2 × (12 + 4) = 32 cm. "
+        "Difference = 48 - 32 = 16 cm.",
+    ))
+
+    # Practice 2.2: s1=15, s2=6. Diff = 2*(15-6) = 18 cm. Answer: C (18 cm)
+    opts2 = [14, 16, 18, 22, 24]
+    check_square_rect_diff(15, 6, opts2, 2)
+    fig2 = fig_square_rect(15, 6, "15 cm", label_s2="6 cm")
+    d.problem(
+        f"Practice {set_num}.2",
+        "The side of square <i>ABCD</i> is 15 cm. The side <i>AM</i> of rectangle <i>AMTD</i> is 6 cm. "
+        "How much greater is the perimeter of square <i>ABCD</i> than the perimeter of rectangle <i>AMTD</i>?",
+        fig2,
+        "right",
+        [f"{v} cm" for v in opts2],
+        choice_cols=5,
+    )
+    key.append((
+        f"{set_num}.2",
+        "C",
+        "Perimeter of square ABCD = 4 × 15 = 60 cm. Perimeter of rectangle AMTD = 2 × (15 + 6) = 42 cm. "
+        "Difference = 60 - 42 = 18 cm.",
+    ))
+
+    # Practice 2.3: twist - gives MB = 7 cm, s1 = 18 cm. Diff = 2 * MB = 14 cm. Answer: B (14 cm)
+    opts3 = [12, 14, 16, 18, 22]
+    check_square_rect_diff(18, None, opts3, 1, twist_mb=7)
+    fig3 = fig_square_rect(18, 11, "18 cm", label_mb="MB = 7 cm")
+    d.problem(
+        f"Practice {set_num}.3",
+        "The side of square <i>ABCD</i> is 18 cm. A line segment <i>MT</i> divides the square into two rectangles. "
+        "The length of segment <i>MB</i> is 7 cm. How much greater is the perimeter of square <i>ABCD</i> than the perimeter of rectangle <i>AMTD</i>?",
+        fig3,
+        "right",
+        [f"{v} cm" for v in opts3],
+        choice_cols=5,
+    )
+    key.append((
+        f"{set_num}.3",
+        "B",
+        "Since AB = 18 cm and MB = 7 cm, AM = 18 - 7 = 11 cm. "
+        "Perimeter of square = 4 × 18 = 72 cm. Perimeter of rectangle AMTD = 2 × (18 + 11) = 58 cm. "
+        "Difference = 72 - 58 = 14 cm (which is simply 2 × MB = 2 × 7 = 14 cm).",
+    ))
+
+
+def q_2002_7(d, key, set_num=2, include_orig=True):
     d.heading(f"Set {set_num} - Pieces of a skyline", "Based on 2002, Problem 7")
-    sky = [("A", 40), ("A", 40), ("H", 42), ("V", 40), ("H", 83), ("V", 42), ("D", 42, 43), ("D", 43, -43),
-           ("V", -42), ("H", 83), ("V", -40), ("H", 42), ("D", 40, 40), ("D", 40, -40), ("V", 80), ("A", 40),
-           ("A", 40), ("V", -80), ("H", 40), ("V", 40), ("H", 45), ("V", 85), ("H", 15), ("V", -85), ("H", 65),
-           ("V", -40), ("H", 40)]
-    pcs = [[("V", -30), ("H", 40), ("V", -40), ("H", 30)],
-           [("D", 40, -40), ("V", 80), ("A", 40)],
-           [("A", 40), ("V", -50), ("H", 25), ("V", 50), ("A", 40)],
-           [("H", 40), ("V", -40), ("H", 42), ("D", 40, 40)],
-           [("A", 40), ("A", 40), ("V", -50)]]
-    d.problem("Original 2002 #7.", "Far away we see the skyline of a castle. Which of the pieces "
-              "<b>cannot</b> belong to the skyline?", skyline_problem(sky, pcs, 0.36), "below")
-    key.append(("2002 #7", "C", "Wherever there are two arches, they sit right next to each other. There is never a U-shaped dip between two arches."))
+    if include_orig:
+        sky = [("A", 40), ("A", 40), ("H", 42), ("V", 40), ("H", 83), ("V", 42), ("D", 42, 43), ("D", 43, -43),
+               ("V", -42), ("H", 83), ("V", -40), ("H", 42), ("D", 40, 40), ("D", 40, -40), ("V", 80), ("A", 40),
+               ("A", 40), ("V", -80), ("H", 40), ("V", 40), ("H", 45), ("V", 85), ("H", 15), ("V", -85), ("H", 65),
+               ("V", -40), ("H", 40)]
+        pcs = [[("V", -30), ("H", 40), ("V", -40), ("H", 30)],
+               [("D", 40, -40), ("V", 80), ("A", 40)],
+               [("A", 40), ("V", -50), ("H", 25), ("V", 50), ("A", 40)],
+               [("H", 40), ("V", -40), ("H", 42), ("D", 40, 40)],
+               [("A", 40), ("A", 40), ("V", -50)]]
+        d.problem("Original 2002 #7.", "Far away we see the skyline of a castle. Which of the pieces "
+                  "<b>cannot</b> belong to the skyline?", skyline_problem(sky, pcs, 0.36), "below")
+        key.append(("2002 #7", "C", "Wherever there are two arches, they sit right next to each other. There is never a U-shaped dip between two arches."))
 
     sky = [("H", 60), ("A", 35), ("A", 35), ("H", 40), ("V", 75), ("H", 30), ("D", 25, 35), ("D", 25, -35),
            ("H", 30), ("V", -75), ("H", 40), ("V", 110), ("H", 20), ("V", -110), ("H", 60)]
@@ -605,14 +1001,15 @@ def q_2002_7(d, key, set_num=2):
     key.append((f"{set_num}.3", "D", "After each arch the line goes flat and then UP. Piece D goes down after the arch."))
 
 
-def q_2002_9(d, key, set_num=3):
+def q_2002_9(d, key, set_num=3, include_orig=True):
     d.heading(f"Set {set_num} - Balance scales", "Based on 2002, Problem 9")
-    d.problem("Original 2002 #9.", "On one plate of a balance there are 6 oranges (small circles) and on the "
-              "other there are melons (big circles). When we put one more melon, exactly like the others, on the "
-              "orange plate, the balance is level. The weight of one melon is the same as:",
-              fig_balance([4] * 6, [9, 9], 1), "right",
-              ["2 oranges", "3 oranges", "4 oranges", "5 oranges", "6 oranges"], 3)
-    key.append(("2002 #9", "E", "6 oranges + 1 melon = 2 melons. Take one melon off each side: 6 oranges = 1 melon."))
+    if include_orig:
+        d.problem("Original 2002 #9.", "On one plate of a balance there are 6 oranges (small circles) and on the "
+                  "other there are melons (big circles). When we put one more melon, exactly like the others, on the "
+                  "orange plate, the balance is level. The weight of one melon is the same as:",
+                  fig_balance([4] * 6, [9, 9], 1), "right",
+                  ["2 oranges", "3 oranges", "4 oranges", "5 oranges", "6 oranges"], 3)
+        key.append(("2002 #9", "E", "6 oranges + 1 melon = 2 melons. Take one melon off each side: 6 oranges = 1 melon."))
 
     d.problem(f"Practice {set_num}.1", "On one plate there are 8 plums (small circles) and on the other 3 lemons "
               "(gray circles). When we put one more lemon on the plum plate, the balance is level. "
@@ -635,12 +1032,13 @@ def q_2002_9(d, key, set_num=3):
     key.append((f"{set_num}.3", "D", "Take 3 oranges off each side: 1 melon = 6 oranges, so 2 melons = 12 oranges."))
 
 
-def q_2003_9(d, key, set_num=4):
+def q_2003_9(d, key, set_num=4, include_orig=True):
     d.heading(f"Set {set_num} - Red outside, blue inside", "Based on 2003, Problem 9")
-    d.problem("Original 2003 #9.", "Chris built the brick in the picture using red and blue cubes of the same "
-              "size. The outside of the brick is completely red, but all cubes used inside are blue. "
-              "How many blue cubes did Chris use?", fig_brick(5, 4, 4), "right", [12, 24, 36, 40, 48])
-    key.append(("2003 #9", "A", "Brick is 5 x 4 x 4. Remove the outer layer: inside is 3 x 2 x 2 = 12 blue cubes."))
+    if include_orig:
+        d.problem("Original 2003 #9.", "Chris built the brick in the picture using red and blue cubes of the same "
+                  "size. The outside of the brick is completely red, but all cubes used inside are blue. "
+                  "How many blue cubes did Chris use?", fig_brick(5, 4, 4), "right", [12, 24, 36, 40, 48])
+        key.append(("2003 #9", "A", "Brick is 5 x 4 x 4. Remove the outer layer: inside is 3 x 2 x 2 = 12 blue cubes."))
 
     d.problem(f"Practice {set_num}.1", "Maya built this brick (4 cubes wide, 4 cubes tall, 3 cubes deep). The outside "
               "is completely red and all the cubes inside are blue. How many blue cubes did she use?",
@@ -658,14 +1056,15 @@ def q_2003_9(d, key, set_num=4):
     key.append((f"{set_num}.3", "D", "Total = 5 x 3 x 3 = 45. Inside (blue) = 3 x 1 x 1 = 3. Red = 45 - 3 = 42."))
 
 
-def q_2003_12(d, key, set_num=5):
+def q_2003_12(d, key, set_num=5, include_orig=True):
     d.heading(f"Set {set_num} - Folding a house", "Based on 2003, Problem 12")
     tip = ("<i>(The dark parts at the top of the picture are the roof. The shape in the middle is the floor.)</i>")
-    net = {"F": "door", "K": None, "L": None, "R": "dot"}
-    opts = [("GL", None, "dot"), ("SL", "door", None), ("GL", "door", "dot"), ("SL", None, "dot"), ("GL", None, "door")]
-    d.problem("Original 2003 #12.", "The picture has been drawn on paper and cut out to make a house. "
-              "Which of the houses did it become? " + tip, house_problem(net, opts, 0), "below")
-    key.append(("2003 #12", "A", "Stand in front of the door wall: the dot wall is on your LEFT. So from the back (no door), the dot is on the right of the plain end wall - house A."))
+    if include_orig:
+        net = {"F": "door", "K": None, "L": None, "R": "dot"}
+        opts = [("GL", None, "dot"), ("SL", "door", None), ("GL", "door", "dot"), ("SL", None, "dot"), ("GL", None, "door")]
+        d.problem("Original 2003 #12.", "The picture has been drawn on paper and cut out to make a house. "
+                  "Which of the houses did it become? " + tip, house_problem(net, opts, 0), "below")
+        key.append(("2003 #12", "A", "Stand in front of the door wall: the dot wall is on your LEFT. So from the back (no door), the dot is on the right of the plain end wall - house A."))
 
     net = {"F": None, "K": "door", "L": "dot", "R": None}
     opts = [("GL", "door", "dot"), ("SL", "door", None), ("SL", "door", "dot"), ("GL", None, None), ("SL", None, "dot")]
@@ -686,13 +1085,14 @@ def q_2003_12(d, key, set_num=5):
     key.append((f"{set_num}.3", "B", "Facing the dot end wall: the door wall is on your right, the window wall on your left. B shows the dot wall with the door wall to its right."))
 
 
-def q_2003_14(d, key, set_num=6):
+def q_2003_14(d, key, set_num=6, include_orig=True):
     d.heading(f"Set {set_num} - Area of a letter on squared paper", "Based on 2003, Problem 14")
     q = "If the side of each little square is 1 cm, what is the area of the letter %s (in square cm)?"
-    N = [[(1, 0), (2, 0), (2, 6), (1, 6)], [(5, 0), (6, 0), (6, 6), (5, 6)], [(2, 6), (3, 6), (5, 0), (4, 0)]]
-    assert letter_area(N) == 18
-    d.problem("Original 2003 #14.", q % "N", fig_letter(7, 6, N), "right", [14, 15, 16, 17, 18])
-    key.append(("2003 #14", "E", "Each side bar is 6. The slanted part is a parallelogram 1 wide and 6 tall = 6 (cut-off triangles fit together). 6+6+6 = 18."))
+    if include_orig:
+        N = [[(1, 0), (2, 0), (2, 6), (1, 6)], [(5, 0), (6, 0), (6, 6), (5, 6)], [(2, 6), (3, 6), (5, 0), (4, 0)]]
+        assert letter_area(N) == 18
+        d.problem("Original 2003 #14.", q % "N", fig_letter(7, 6, N), "right", [14, 15, 16, 17, 18])
+        key.append(("2003 #14", "E", "Each side bar is 6. The slanted part is a parallelogram 1 wide and 6 tall = 6 (cut-off triangles fit together). 6+6+6 = 18."))
 
     Z = [[(1, 6), (6, 6), (6, 7), (1, 7)], [(1, 0), (6, 0), (6, 1), (1, 1)], [(4, 6), (6, 6), (3, 1), (1, 1)]]
     assert letter_area(Z) == 20
@@ -709,6 +1109,256 @@ def q_2003_14(d, key, set_num=6):
     assert letter_area(M) == 22
     d.problem(f"Practice {set_num}.3", q % "M", fig_letter(10, 5, M, 14), "right", [18, 20, 22, 24, 26])
     key.append((f"{set_num}.3", "C", "Two side bars: 5 + 5 = 10. The middle V is two slanted strips, each 3 across and 2 tall = 6. 10 + 6 + 6 = 22."))
+
+
+# ------------------------------------------------- 2003 #18: Covering empty area in grid with 2 pieces
+def fig_grid_black_white(grid_matrix, s=12):
+    """Draw a grid of squares where 1=black, 0=white."""
+    nr = len(grid_matrix)
+    nc = len(grid_matrix[0])
+    w = nc * s
+    h = nr * s
+
+    def draw(c, x, y):
+        top = y + h
+        c.setLineWidth(0.8)
+        for r in range(nr):
+            for col in range(nc):
+                cx = x + col * s
+                cy = top - (r + 1) * s
+                if grid_matrix[r][col] == 1:
+                    c.setFillColor(colors.black)
+                    c.rect(cx, cy, s, s, stroke=1, fill=1)
+                else:
+                    c.setFillColor(colors.white)
+                    c.rect(cx, cy, s, s, stroke=1, fill=1)
+
+    return w, h, draw
+
+
+def fig_polyomino_numbered(cells, num, s=11):
+    """Draw a polyomino piece with a label number above or inside."""
+    rs = [p[0] for p in cells]
+    cs = [p[1] for p in cells]
+    min_r, min_c = min(rs), min(cs)
+    norm = {(r - min_r, c - min_c) for r, c in cells}
+    nr = max(r for r, _ in norm) + 1
+    nc = max(c for _, c in norm) + 1
+    w = nc * s
+    label_h = 13
+    h = nr * s + label_h
+
+    def draw(c, x, y):
+        # Draw number label
+        c.setFont("Helvetica-Bold", 10)
+        c.setFillColor(colors.black)
+        c.drawCentredString(x + w / 2, y + h - 10, f"Piece {num}")
+
+        top = y + nr * s
+        c.setLineWidth(1.0)
+        c.setStrokeColor(colors.black)
+        c.setFillColor(colors.Color(0.82, 0.82, 0.82))
+        for r, col in norm:
+            cx = x + col * s
+            cy = top - (r + 1) * s
+            c.rect(cx, cy, s, s, stroke=1, fill=1)
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_cover_two_pieces(empty_size, piece_sizes, opts, correct_idx):
+    pair_sums = []
+    for pair_str in opts:
+        p1, p2 = [int(v) - 1 for v in pair_str.split("+")]
+        pair_sums.append(piece_sizes[p1] + piece_sizes[p2])
+    assert pair_sums[correct_idx] == empty_size, f"Expected {empty_size}, got {pair_sums[correct_idx]}"
+    matches = [i for i, s in enumerate(pair_sums) if s == empty_size]
+    assert matches == [correct_idx], f"Multiple matches: {matches}"
+
+
+def q_2003_18(d, key, set_num=6, include_orig=True):
+    d.heading(f"Set {set_num} - Covering an empty shape with two pieces", "Based on 2003, Problem 18")
+
+    # Original 2003 #18: 7x7 grid with 15 empty cells.
+    # Pieces: 1 (9), 2 (10), 3 (7), 4 (8).
+    # Options: 1+3 (16), 2+4 (18), 2+3 (17), 1+4 (17), 3+4 (15) -> E
+    empty_0 = 15
+    pcs_sizes_0 = [9, 10, 7, 8]
+    opts0 = ["1 and 3", "2 and 4", "2 and 3", "1 and 4", "3 and 4"]
+    check_cover_two_pieces(empty_0, pcs_sizes_0, ["1+3", "2+4", "2+3", "1+4", "3+4"], 4)
+
+    # 7x7 grid matrix: 1=black, 0=white (empty). Exactly 15 zeros.
+    grid0_m = [
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 0, 0, 0, 1, 1],
+        [1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 1, 0, 0, 1],
+        [1, 0, 0, 1, 1, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1],
+    ]
+    assert sum(row.count(0) for row in grid0_m) == 15
+
+    # 4 pieces:
+    p1_cells = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
+    p2_cells = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3), (2, 0), (2, 1)]
+    p3_cells = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1)]
+    p4_cells = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+
+    if include_orig:
+        fig0 = hstack([
+            fig_grid_black_white(grid0_m, s=12),
+            hstack([
+                fig_polyomino_numbered(p1_cells, 1, s=10),
+                fig_polyomino_numbered(p2_cells, 2, s=10),
+                fig_polyomino_numbered(p3_cells, 3, s=10),
+                fig_polyomino_numbered(p4_cells, 4, s=10),
+            ], gap=12),
+        ], gap=18)
+        d.problem(
+            "Original 2003 #18.",
+            "The picture shows a 7 × 7 square with some cells black and the rest white. We want to cover "
+            "the white area completely without overlaps using two of the numbered pieces (1, 2, 3, 4). "
+            "Which two pieces should we choose?",
+            fig0,
+            "below",
+            opts0,
+            choice_cols=5,
+        )
+        key.append((
+            "2003 #18",
+            "E",
+            "Counting the white cells in the 7 × 7 grid gives 15 empty cells. "
+            "The pieces contain: Piece 1 = 9 squares, Piece 2 = 10 squares, Piece 3 = 7 squares, Piece 4 = 8 squares. "
+            "Only Piece 3 and Piece 4 together have 7 + 8 = 15 squares to cover the white area.",
+        ))
+
+    # Practice .1: 6x6 grid, 14 empty cells. Pieces: 1(6), 2(8), 3(9), 4(7). Answer: A (1 and 2, 6+8=14)
+    opts1 = ["1 and 2", "1 and 3", "2 and 4", "3 and 4", "2 and 3"]
+    check_cover_two_pieces(14, [6, 8, 9, 7], ["1+2", "1+3", "2+4", "3+4", "2+3"], 0)
+    grid1_m = [
+        [1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1, 1],
+        [1, 0, 0, 0, 1, 1],
+        [1, 1, 1, 1, 1, 1],
+    ]
+    assert sum(row.count(0) for row in grid1_m) == 14
+    p1_1 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]
+    p1_2 = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    p1_3 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
+    p1_4 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1)]
+    fig1 = hstack([
+        fig_grid_black_white(grid1_m, s=12),
+        hstack([
+            fig_polyomino_numbered(p1_1, 1, s=10),
+            fig_polyomino_numbered(p1_2, 2, s=10),
+            fig_polyomino_numbered(p1_3, 3, s=10),
+            fig_polyomino_numbered(p1_4, 4, s=10),
+        ], gap=12),
+    ], gap=18)
+    d.problem(
+        f"Practice {set_num}.1",
+        "The picture shows a 6 × 6 square with some cells black and the rest white. We want to cover "
+        "the white area completely without overlaps using two of the numbered pieces (1, 2, 3, 4). "
+        "Which two pieces should we choose?",
+        fig1,
+        "below",
+        opts1,
+        choice_cols=5,
+    )
+    key.append((
+        f"{set_num}.1",
+        "A",
+        "Counting the white cells gives 14 empty cells. The pieces have 6, 8, 9, and 7 squares. "
+        "Only Piece 1 and Piece 2 have 6 + 8 = 14 squares.",
+    ))
+
+    # Practice .2: 6x6 grid, 13 empty cells. Pieces: 1(5), 2(7), 3(8), 4(9). Answer: C (1 and 3, 5+8=13)
+    opts2 = ["1 and 2", "2 and 3", "1 and 3", "2 and 4", "3 and 4"]
+    check_cover_two_pieces(13, [5, 7, 8, 9], ["1+2", "2+3", "1+3", "2+4", "3+4"], 2)
+    grid2_m = [
+        [1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1, 1],
+        [1, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 1],
+        [1, 1, 0, 0, 1, 1],
+        [1, 1, 1, 1, 1, 1],
+    ]
+    assert sum(row.count(0) for row in grid2_m) == 13
+    p2_1 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)]
+    p2_2 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0), (2, 1)]
+    p2_3 = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    p2_4 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]
+    fig2 = hstack([
+        fig_grid_black_white(grid2_m, s=12),
+        hstack([
+            fig_polyomino_numbered(p2_1, 1, s=10),
+            fig_polyomino_numbered(p2_2, 2, s=10),
+            fig_polyomino_numbered(p2_3, 3, s=10),
+            fig_polyomino_numbered(p2_4, 4, s=10),
+        ], gap=12),
+    ], gap=18)
+    d.problem(
+        f"Practice {set_num}.2",
+        "The picture shows a 6 × 6 square with some cells black and the rest white. We want to cover "
+        "the white area completely without overlaps using two of the numbered pieces (1, 2, 3, 4). "
+        "Which two pieces should we choose?",
+        fig2,
+        "below",
+        opts2,
+        choice_cols=5,
+    )
+    key.append((
+        f"{set_num}.2",
+        "C",
+        "Counting the white cells gives 13 empty cells. The pieces have 5, 7, 8, and 9 squares. "
+        "Only Piece 1 and Piece 3 have 5 + 8 = 13 squares.",
+    ))
+
+    # Practice .3: 5x5 grid, 11 empty cells. Pieces: 1(4), 2(5), 3(6), 4(8). Answer: D (2 and 3, 5+6=11)
+    opts3 = ["1 and 2", "1 and 4", "2 and 4", "2 and 3", "3 and 4"]
+    check_cover_two_pieces(11, [4, 5, 6, 8], ["1+2", "1+4", "2+4", "2+3", "3+4"], 3)
+    grid3_m = [
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0],
+        [1, 1, 1, 1, 0],
+    ]
+    assert sum(row.count(0) for row in grid3_m) == 11
+    p3_1 = [(0, 0), (0, 1), (1, 0), (1, 1)]
+    p3_2 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1)]
+    p3_3 = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]
+    p3_4 = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    fig3 = hstack([
+        fig_grid_black_white(grid3_m, s=13),
+        hstack([
+            fig_polyomino_numbered(p3_1, 1, s=11),
+            fig_polyomino_numbered(p3_2, 2, s=11),
+            fig_polyomino_numbered(p3_3, 3, s=11),
+            fig_polyomino_numbered(p3_4, 4, s=11),
+        ], gap=12),
+    ], gap=18)
+    d.problem(
+        f"Practice {set_num}.3",
+        "The picture shows a 5 × 5 square with some cells black and the rest white. We want to cover "
+        "the white area completely without overlaps using two of the numbered pieces (1, 2, 3, 4). "
+        "Which two pieces should we choose?",
+        fig3,
+        "below",
+        opts3,
+        choice_cols=5,
+    )
+    key.append((
+        f"{set_num}.3",
+        "D",
+        "Counting the white cells gives 11 empty cells. The pieces have 4, 5, 6, and 8 squares. "
+        "Only Piece 2 and Piece 3 have 5 + 6 = 11 squares.",
+    ))
 
 
 # ------------------------------------------------- 2007 #1: Forking roads
@@ -808,27 +1458,28 @@ def fig_fork_road(forks):
     return W, H, draw
 
 
-def q_2007_1(d, key, set_num=1):
+def q_2007_1(d, key, set_num=1, include_orig=True):
     d.heading(f"Set {set_num} - Choosing paths along a road", "Based on 2007, Problem 1")
 
     # Original 2007 #1
-    forks = [(1, 2), (3, 4), (5, 6)]
-    opts = [(1, 2, 4), (2, 3, 4), (2, 3, 5), (1, 5, 6), (1, 2, 5)]
-    check_fork_road(forks, opts, 2)
-    d.problem(
-        "Original 2007 #1.",
-        "Zita walked from the left to the right and wrote the numbers she saw along the roads in her "
-        "notepad. Which of the following groups of numbers could be the numbers written by Zita?",
-        fig_fork_road(forks),
-        "below",
-        [f"{a}, {b} and {c}" for a, b, c in opts],
-        choice_cols=3,
-    )
-    key.append((
-        "2007 #1",
-        "C",
-        "At the 1st fork Zita picks 1 or 2; at the 2nd fork 3 or 4; at the 3rd fork 5 or 6. Only (2, 3 and 5) has one from each fork.",
-    ))
+    if include_orig:
+        forks = [(1, 2), (3, 4), (5, 6)]
+        opts = [(1, 2, 4), (2, 3, 4), (2, 3, 5), (1, 5, 6), (1, 2, 5)]
+        check_fork_road(forks, opts, 2)
+        d.problem(
+            "Original 2007 #1.",
+            "Zita walked from the left to the right and wrote the numbers she saw along the roads in her "
+            "notepad. Which of the following groups of numbers could be the numbers written by Zita?",
+            fig_fork_road(forks),
+            "below",
+            [f"{a}, {b} and {c}" for a, b, c in opts],
+            choice_cols=3,
+        )
+        key.append((
+            "2007 #1",
+            "C",
+            "At the 1st fork Zita picks 1 or 2; at the 2nd fork 3 or 4; at the 3rd fork 5 or 6. Only (2, 3 and 5) has one from each fork.",
+        ))
 
     # Practice .1
     forks1 = [(1, 2), (3, 4), (5, 6)]
@@ -889,6 +1540,203 @@ def q_2007_1(d, key, set_num=1):
         "Possible sums are 2+3+4=9, 2+6+4=12, 5+3+4=12, 2+3+8=13, 5+6+4=15, 2+6+8=16, 5+3+8=16, 5+6+8=19. From the choices, only 16 is possible (for example 2 + 6 + 8 = 16).",
     ))
 
+
+
+# ------------------------------------------------- 2007 #8: Fitting piece to form a rectangle
+def poly_cells_from_grid(grid):
+    cells = set()
+    for r in range(len(grid)):
+        for c in range(len(grid[r])):
+            if grid[r][c] == 1:
+                cells.add((r, c))
+    return cells
+
+
+def get_poly_rotations(cells):
+    rots = []
+    current = cells
+    for _ in range(4):
+        min_r = min(r for r, c in current)
+        min_c = min(c for r, c in current)
+        norm = frozenset((r - min_r, c - min_c) for r, c in current)
+        if norm not in rots:
+            rots.append(norm)
+        current = set((c, -r) for r, c in current)
+    return rots
+
+
+def can_form_rect(given_cells, cand_cells):
+    for rot in get_poly_rotations(cand_cells):
+        for dr in range(-8, 9):
+            for dc in range(-8, 9):
+                trans = set((r + dr, c + dc) for r, c in rot)
+                if not (given_cells & trans):
+                    union = given_cells | trans
+                    min_r = min(r for r, c in union)
+                    max_r = max(r for r, c in union)
+                    min_c = min(c for r, c in union)
+                    max_c = max(c for r, c in union)
+                    h = max_r - min_r + 1
+                    w = max_c - min_c + 1
+                    if len(union) == h * w:
+                        return True
+    return False
+
+
+def check_fit_rectangle(given_grid, opt_grids, correct_idx):
+    g_cells = poly_cells_from_grid(given_grid)
+    results = [can_form_rect(g_cells, poly_cells_from_grid(opt)) for opt in opt_grids]
+    assert results[correct_idx] is True, f"Correct choice {correct_idx} failed to form rectangle!"
+    matches = [i for i, r in enumerate(results) if r]
+    assert matches == [correct_idx], f"Expected unique match at {correct_idx}, got {matches}"
+
+
+def fig_poly_grid(grid, s=11, label=None):
+    """Draw a polyomino defined by binary 2D grid."""
+    nr = len(grid)
+    nc = len(grid[0])
+    w = nc * s
+    label_h = 13 if label else 0
+    h = nr * s + label_h
+
+    def draw(c, x, y):
+        if label:
+            c.setFont("Helvetica-Bold", 9)
+            c.setFillColor(colors.black)
+            c.drawCentredString(x + w / 2, y + h - 10, label)
+
+        top = y + nr * s
+        c.setLineWidth(0.9)
+        c.setStrokeColor(colors.black)
+        c.setFillColor(colors.Color(0.85, 0.85, 0.85))
+        for r in range(nr):
+            for col in range(nc):
+                if grid[r][col] == 1:
+                    cx = x + col * s
+                    cy = top - (r + 1) * s
+                    c.rect(cx, cy, s, s, stroke=1, fill=1)
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def q_2007_8(d, key, set_num=7, include_orig=True):
+    d.heading(f"Set {set_num} - Joining pieces to form a rectangle", "Based on 2007, Problem 8")
+
+    # Original 2007 #8:
+    # Given shape: column heights [5, 2, 1] (8 cells)
+    # Piece B: column heights [5, 4, 1] (10 cells). Rotated 180 -> forms 6x3 rectangle (18 cells).
+    g0 = [[1, 1, 1], [1, 1, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
+    opts0 = [
+        [[1, 1, 1], [1, 1, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]],
+        [[1, 1, 1], [1, 1, 0], [1, 1, 0], [1, 1, 0], [1, 0, 0]],
+        [[1, 1], [1, 1], [1, 1], [1, 1], [0, 1]],
+        [[1, 1, 1], [0, 1, 1], [0, 0, 1]],
+        [[1, 1, 1], [0, 1, 1], [0, 1, 1], [0, 0, 1]],
+    ]
+    check_fit_rectangle(g0, opts0, 1)
+
+    if include_orig:
+        fig0 = vstack([
+            fig_poly_grid(g0, s=12, label="Given piece"),
+            option_row([fig_poly_grid(opt, s=12) for opt in opts0], gap=16),
+        ], gap=12)
+        d.problem(
+            "Original 2007 #8.",
+            "Which of the shapes (A through E) can be joined together with the given shape to form a solid rectangle without gaps or overlaps?",
+            fig0,
+            "below",
+        )
+        key.append((
+            "2007 #8",
+            "B",
+            "The given shape has column heights 5, 2, and 1 (8 squares in total). Shape B has column heights "
+            "5, 4, and 1 (10 squares in total). Turning shape B upside-down gives heights 1, 4, and 5. "
+            "Fitting them together gives column heights (5+1=6, 2+4=6, 1+5=6), forming a solid 6 × 3 rectangle.",
+        ))
+
+    # Practice .1: given heights [4, 1] (5 cells). Joined with [4, 1] rotated 180 to form 5x2 rectangle. Answer: A
+    g1 = [[1, 1], [1, 0], [1, 0], [1, 0]]
+    opts1 = [
+        [[1, 1], [1, 0], [1, 0], [1, 0]],
+        [[1, 1], [1, 1], [1, 0]],
+        [[1, 1, 1], [1, 1, 0]],
+        [[1, 1], [1, 1]],
+        [[1, 1], [1, 0], [1, 0]],
+    ]
+    check_fit_rectangle(g1, opts1, 0)
+    fig1 = vstack([
+        fig_poly_grid(g1, s=12, label="Given piece"),
+        option_row([fig_poly_grid(opt, s=12) for opt in opts1], gap=16),
+    ], gap=12)
+    d.problem(
+        f"Practice {set_num}.1",
+        "Which of the shapes (A through E) can be joined together with the given shape to form a solid rectangle without gaps or overlaps?",
+        fig1,
+        "below",
+    )
+    key.append((
+        f"{set_num}.1",
+        "A",
+        "The given shape has column heights 4 and 1 (5 squares). Shape A is identical; turned upside-down "
+        "it has column heights 1 and 4. Joining them gives columns of height 4+1=5 each, creating a 5 × 2 rectangle.",
+    ))
+
+    # Practice .2: given col heights [3, 1, 1] (5 cells). Joined with 2x2 square (4 cells) to form 3x3 square! Answer: B
+    g2 = [[1, 1, 1], [1, 0, 0], [1, 0, 0]]
+    opts2 = [
+        [[1, 1], [1, 0], [1, 0]],
+        [[1, 1], [1, 1]],
+        [[1, 1, 1], [1, 0, 0]],
+        [[1, 1, 1, 1]],
+        [[1, 1], [0, 1], [0, 1]],
+    ]
+    check_fit_rectangle(g2, opts2, 1)
+    fig2 = vstack([
+        fig_poly_grid(g2, s=12, label="Given piece"),
+        option_row([fig_poly_grid(opt, s=12) for opt in opts2], gap=16),
+    ], gap=12)
+    d.problem(
+        f"Practice {set_num}.2",
+        "Which of the shapes (A through E) can be joined together with the given shape to form a solid square (or rectangle) without gaps or overlaps?",
+        fig2,
+        "below",
+    )
+    key.append((
+        f"{set_num}.2",
+        "B",
+        "The given shape has 5 squares forming a corner inside a 3 × 3 boundary. "
+        "A 2 × 2 square (shape B, 4 squares) fits into the empty corner to complete a solid 3 × 3 square.",
+    ))
+
+    # Practice .3: given col heights [3, 2, 1] (6 cells). Joined with [3, 2, 1] rotated 180 to form 4x3 rectangle. Answer: C
+    g3 = [[1, 1, 1], [1, 1, 0], [1, 0, 0]]
+    opts3 = [
+        [[1, 1], [1, 1], [1, 1]],
+        [[1, 1, 1], [1, 1, 1]],
+        [[1, 1, 1], [1, 1, 0], [1, 0, 0]],
+        [[1, 1, 1, 1], [1, 1, 0, 0]],
+        [[1, 1, 1], [1, 1, 0], [0, 1, 0]],
+    ]
+    check_fit_rectangle(g3, opts3, 2)
+    fig3 = vstack([
+        fig_poly_grid(g3, s=12, label="Given piece"),
+        option_row([fig_poly_grid(opt, s=12) for opt in opts3], gap=16),
+    ], gap=12)
+    d.problem(
+        f"Practice {set_num}.3",
+        "Which of the shapes (A through E) can be joined together with the given shape to form a solid rectangle without gaps or overlaps?",
+        fig3,
+        "below",
+    )
+    key.append((
+        f"{set_num}.3",
+        "C",
+        "The given staircase shape has column heights 3, 2, and 1 (6 squares). "
+        "Shape C is the same staircase; turned upside-down it has column heights 1, 2, and 3. "
+        "Joined together, every column has height 4, forming a solid 4 × 3 rectangle of 12 squares.",
+    ))
 
 
 # ------------------------------------------------- Set 8: 2007 #14 Aquarium & 3D cubes
@@ -992,39 +1840,40 @@ def check_aquarium(capacity, cubes_count, choices, answer_idx, twist_type=None, 
     assert matching == [answer_idx], f"Multiple or no choices match {val}: {matching}"
 
 
-def q_2007_14(d, key, set_num=1):
+def q_2007_14(d, key, set_num=1, include_orig=True):
     d.heading(
         f"Problem {set_num}: 2007 #14 - Cube Aquarium",
         "Arranging 1 dm cubes inside a 3 dm aquarium (counting 3D cubes / volume)",
     )
 
     # Original 2007 #14
-    H0 = [
-        [1, 0, 0],
-        [2, 1, 0],
-        [3, 2, 1],
-    ]
-    opts0 = [9, 13, 17, 21, 27]
-    check_aquarium(27, sum(sum(r) for r in H0), opts0, 2)
-    d.problem(
-        "2007 #14",
-        "Daniella has an aquarium in the shape of a cube with edges 3 dm each. "
-        "She started arranging cubes with edges 1 dm each inside the aquarium, "
-        "in the way you can see on the picture. At most how many more such "
-        "cubes can Daniella put into the aquarium?",
-        fig_aquarium(3, 3, 3, H0),
-        "right",
-        opts0,
-        choice_cols=5,
-    )
-    key.append((
-        "2007 #14",
-        "C",
-        "The aquarium holds 3 × 3 × 3 = 27 small cubes in total. Counting the cubes already inside: "
-        "the front layer has 1 cube, the middle layer has 2 + 1 = 3 cubes, and the back layer has "
-        "3 + 2 + 1 = 6 cubes, for a total of 1 + 3 + 6 = 10 cubes. Therefore, Daniella can put at "
-        "most 27 - 10 = 17 more cubes into the aquarium.",
-    ))
+    if include_orig:
+        H0 = [
+            [1, 0, 0],
+            [2, 1, 0],
+            [3, 2, 1],
+        ]
+        opts0 = [9, 13, 17, 21, 27]
+        check_aquarium(27, sum(sum(r) for r in H0), opts0, 2)
+        d.problem(
+            "2007 #14",
+            "Daniella has an aquarium in the shape of a cube with edges 3 dm each. "
+            "She started arranging cubes with edges 1 dm each inside the aquarium, "
+            "in the way you can see on the picture. At most how many more such "
+            "cubes can Daniella put into the aquarium?",
+            fig_aquarium(3, 3, 3, H0),
+            "right",
+            opts0,
+            choice_cols=5,
+        )
+        key.append((
+            "2007 #14",
+            "C",
+            "The aquarium holds 3 × 3 × 3 = 27 small cubes in total. Counting the cubes already inside: "
+            "the front layer has 1 cube, the middle layer has 2 + 1 = 3 cubes, and the back layer has "
+            "3 + 2 + 1 = 6 cubes, for a total of 1 + 3 + 6 = 10 cubes. Therefore, Daniella can put at "
+            "most 27 - 10 = 17 more cubes into the aquarium.",
+        ))
 
     # Practice .1
     H1 = [
@@ -1212,40 +2061,41 @@ def check_mini_sudoku(grid, choices, answer_idx, question_type="single_cell"):
         assert matches == [answer_idx], f"Multiple or no choices match {val}: {matches}"
 
 
-def q_2007_10(d, key, set_num=1):
+def q_2007_10(d, key, set_num=1, include_orig=True):
     d.heading(
         f"Problem {set_num}: 2007 #10 - Mini-Sudoku",
         "Arranging numbers 1, 2, and 3 in a 3×3 square (Latin square logic)",
     )
 
     # Original 2007 #10
-    G0 = [
-        ["1", "?", None],
-        ["2", "1", None],
-        [None, None, None],
-    ]
-    opts0 = ["only 1", "only 2", "only 3", "2 or 3", "1, 2 or 3"]
-    check_mini_sudoku(G0, opts0, 2)
-    d.problem(
-        "2007 #10",
-        "The square in the figure is a <i>mini-sudoku</i>: the numbers 1, 2, and 3 must be "
-        "written in the cells so that each of them appears in each row and in each column. "
-        "Harry started to fill in the square. Which number should he write in the cell "
-        "that is marked by a question mark (?) ?",
-        fig_mini_sudoku(G0),
-        "right",
-        opts0,
-        choice_cols=5,
-    )
-    key.append((
-        "2007 #10",
-        "C",
-        "In a 3 × 3 mini-sudoku, each row and column must contain the numbers 1, 2, and 3 exactly once. "
-        "The middle row already has 2 and 1, so its third cell must be 3. The first column has 1 and 2, "
-        "so its bottom cell must be 3. Now look at the top row: the first cell is 1, so the question mark "
-        "and top-right cell must be 2 and 3. But column 3 already has 3 in the middle row, so the top-right "
-        "cell cannot be 3 (it must be 2). Therefore, the question mark cell must be 3 (only 3).",
-    ))
+    if include_orig:
+        G0 = [
+            ["1", "?", None],
+            ["2", "1", None],
+            [None, None, None],
+        ]
+        opts0 = ["only 1", "only 2", "only 3", "2 or 3", "1, 2 or 3"]
+        check_mini_sudoku(G0, opts0, 2)
+        d.problem(
+            "2007 #10",
+            "The square in the figure is a <i>mini-sudoku</i>: the numbers 1, 2, and 3 must be "
+            "written in the cells so that each of them appears in each row and in each column. "
+            "Harry started to fill in the square. Which number should he write in the cell "
+            "that is marked by a question mark (?) ?",
+            fig_mini_sudoku(G0),
+            "right",
+            opts0,
+            choice_cols=5,
+        )
+        key.append((
+            "2007 #10",
+            "C",
+            "In a 3 × 3 mini-sudoku, each row and column must contain the numbers 1, 2, and 3 exactly once. "
+            "The middle row already has 2 and 1, so its third cell must be 3. The first column has 1 and 2, "
+            "so its bottom cell must be 3. Now look at the top row: the first cell is 1, so the question mark "
+            "and top-right cell must be 2 and 3. But column 3 already has 3 in the middle row, so the top-right "
+            "cell cannot be 3 (it must be 2). Therefore, the question mark cell must be 3 (only 3).",
+        ))
 
     # Practice .1 (Answer: A) only 1)
     G1 = [
@@ -1335,19 +2185,23 @@ def q_2007_10(d, key, set_num=1):
 # Registry of dedicated per-question implementations.
 # Every new (year, number) MUST be implemented as its own q_<year>_<num>(d, key, set_num) method!
 QUESTIONS = {
+    (2002, 1): q_2002_1,
     (2002, 4): q_2002_4,
+    (2002, 6): q_2002_6,
     (2002, 7): q_2002_7,
     (2002, 9): q_2002_9,
     (2003, 9): q_2003_9,
     (2003, 12): q_2003_12,
     (2003, 14): q_2003_14,
+    (2003, 18): q_2003_18,
     (2007, 1): q_2007_1,
+    (2007, 8): q_2007_8,
     (2007, 10): q_2007_10,
     (2007, 14): q_2007_14,
 }
 
 
-def generate_set(selected_questions, out_pdf, subtitle, out_key_pdf=None):
+def generate_set(selected_questions, out_pdf, subtitle, include_orig=True, out_key_pdf=None):
     missing = [q for q in selected_questions if q not in QUESTIONS]
     if missing:
         raise NotImplementedError(
@@ -1360,12 +2214,17 @@ def generate_set(selected_questions, out_pdf, subtitle, out_key_pdf=None):
     c.drawCentredString(PW / 2, PH - 70, "Math Kangaroo Practice - Grades 3-4")
     c.setFont("Helvetica", 11)
     c.drawCentredString(PW / 2, PH - 90, subtitle)
-    c.drawCentredString(PW / 2, PH - 105, "Each original problem is followed by three similar practice problems.")
+    note = (
+        "Each original problem is followed by three similar practice problems."
+        if include_orig
+        else "Three practice problems per selected problem."
+    )
+    c.drawCentredString(PW / 2, PH - 105, note)
     d.y = PH - 130
     key = []
 
     for idx, q_id in enumerate(selected_questions, start=1):
-        QUESTIONS[q_id](d, key, set_num=idx)
+        QUESTIONS[q_id](d, key, set_num=idx, include_orig=include_orig)
 
     # Append answer key on the last page(s)
     append_answer_key(d, key, subtitle=f"For {out_pdf} ({subtitle})")
@@ -1398,6 +2257,11 @@ if __name__ == "__main__":
         default=None,
         help="Output filename or path (e.g. filename.pdf). If omitted, defaults to generated/YYYY-MM-DD-HH-MM-SS.pdf",
     )
+    parser.add_argument(
+        "--no-include-orig",
+        action="store_true",
+        help="Omit original contest problems, generating only practice problems.",
+    )
     args = parser.parse_args()
 
     if args.out:
@@ -1405,6 +2269,8 @@ if __name__ == "__main__":
         out_pdf = ensure_gen_path(fname)
     else:
         out_pdf = get_timestamp_filename()
+
+    include_orig = not args.no_include_orig
 
     if args.questions:
         selected = []
@@ -1416,6 +2282,7 @@ if __name__ == "__main__":
             selected,
             out_pdf,
             f"Practice set for {desc}",
+            include_orig=include_orig,
         )
     else:
         build(out_pdf)
