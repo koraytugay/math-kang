@@ -1,6 +1,6 @@
 """Generate Math Kangaroo practice sets (originals + similar new problems).
 
-Usage:  python generate_practice.py   ->  writes practice_2002_2003.pdf and practice_2002_2003_answers.pdf
+Usage:  python generate_practice.py   ->  writes practice_2002_2003.pdf (with answer key on the last page)
 Requires: reportlab
 """
 import math
@@ -12,7 +12,6 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 
 OUT = "practice_2002_2003.pdf"
-OUT_KEY = "practice_2002_2003_answers.pdf"
 PW, PH = letter
 ML, MR, MT, MB = 54, 54, 60, 54
 TW = PW - ML - MR
@@ -477,24 +476,29 @@ def letter_area(polys):
 
 
 # ================================================================== content
-def write_answer_key(path, title, subtitle, key):
-    kd = Doc(path)
-    kc = kd.c
-    kc.setFont("Helvetica-Bold", 18)
-    kc.drawCentredString(PW / 2, PH - 70, title)
+def append_answer_key(d, key, title="Answer Key & Explanations", subtitle=None):
+    d.new_page()
+    c = d.c
+    c.setFont("Helvetica-Bold", 18)
+    c.drawCentredString(PW / 2, PH - 70, title)
     if subtitle:
-        kc.setFont("Helvetica", 11)
-        kc.drawCentredString(PW / 2, PH - 90, subtitle)
-        kd.y = PH - 115
+        c.setFont("Helvetica", 11)
+        c.drawCentredString(PW / 2, PH - 90, subtitle)
+        d.y = PH - 115
     else:
-        kd.y = PH - 95
-    kd.heading("Answer key & explanations")
+        d.y = PH - 95
+    d.heading("Solutions & kid-friendly explanations")
     for lab, ans, why in key:
         p = Paragraph("<b>%s:&nbsp; %s</b>&nbsp;&nbsp;&nbsp;%s" % (lab, ans, why), BODY)
         _, ph = p.wrap(TW, 1000)
-        kd.need(ph + 8)
-        p.drawOn(kd.c, ML, kd.y - ph)
-        kd.y -= ph + 8
+        d.need(ph + 8)
+        p.drawOn(d.c, ML, d.y - ph)
+        d.y -= ph + 8
+
+
+def write_answer_key(path, title, subtitle, key):
+    kd = Doc(path)
+    append_answer_key(kd, key, title=title, subtitle=subtitle)
     kd.save()
     print("wrote", path)
 
@@ -1100,7 +1104,7 @@ QUESTIONS = {
 }
 
 
-def generate_set(selected_questions, out_pdf, out_key_pdf, subtitle):
+def generate_set(selected_questions, out_pdf, subtitle, out_key_pdf=None):
     missing = [q for q in selected_questions if q not in QUESTIONS]
     if missing:
         raise NotImplementedError(
@@ -1120,15 +1124,11 @@ def generate_set(selected_questions, out_pdf, out_key_pdf, subtitle):
     for idx, q_id in enumerate(selected_questions, start=1):
         QUESTIONS[q_id](d, key, set_num=idx)
 
+    # Append answer key on the last page(s)
+    append_answer_key(d, key, subtitle=f"For {out_pdf} ({subtitle})")
+
     d.save()
     print("wrote", out_pdf)
-
-    write_answer_key(
-        out_key_pdf,
-        "Math Kangaroo Practice - Answer Key",
-        f"For {out_pdf} ({subtitle})",
-        key,
-    )
 
 
 def build():
@@ -1136,7 +1136,6 @@ def build():
     generate_set(
         selected,
         OUT,
-        OUT_KEY,
         "Selected problems from 2002 (#4, #7, #9) and 2003 (#9, #12, #14)",
     )
 
@@ -1163,12 +1162,10 @@ if __name__ == "__main__":
             selected.append((int(parts[0]), int(parts[1])))
         prefix = args.out or "practice"
         out_pdf = f"{prefix}.pdf"
-        out_key_pdf = f"{prefix}_answers.pdf"
         desc = ", ".join(f"{y} #{n}" for y, n in selected)
         generate_set(
             selected,
             out_pdf,
-            out_key_pdf,
             f"Practice set for {desc}",
         )
     else:

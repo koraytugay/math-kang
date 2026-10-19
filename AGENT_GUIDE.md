@@ -35,9 +35,9 @@ When the user specifies questions (via `PROMPT_TEMPLATE.md` or directly in chat,
    - Visually inspect the image carefully (count every grid line, cube, shape, etc.) and solve the original problem.
    - Write a **brand-new dedicated method `q_<year>_<number>(d, key)`** (plus its own bespoke drawing and
      answer-checking helper functions) specifically for that question.
-3. Generate **two separate PDFs every time**:
-   - **Questions worksheet PDF** (e.g. `practice_set_2.pdf`) — problems only, **never** include answers here.
-   - **Answer key PDF** (e.g. `practice_set_2_answers.pdf`) — answer letters + short, kid-friendly explanations.
+3. Generate **a single PDF per practice set**:
+   - **Practice worksheet PDF** (e.g. `practice_set_2.pdf`) — contains the problems on the initial page(s), followed by the **Answer Key & Explanations on the final page(s)** (always starting on a fresh new page at the very end).
+   - Do **NOT** generate a separate answer key file.
 
 ---
 
@@ -94,24 +94,23 @@ What `generate_practice.py` provides for **page layout only**:
   - `d.problem(label, html_text, fig=None, fig_pos="right"|"below", choices=None, choice_cols=5)`
 - `option_row(items, gap=18)`: places 5 `(w, h, draw_fn)` figures in a horizontal row labelled `A)`–`E)`.
 - `vstack(figs, gap=12)` and `hstack(figs, gap=20)`: stack `(w, h, draw_fn)` figures vertically or horizontally.
-- `write_answer_key(path, title, subtitle, key)`: writes the separate answer key PDF.
+- `append_answer_key(d, key, title, subtitle)`: appends the answer key and kid-friendly explanations starting on a fresh new page at the end of the document.
 
 Every custom figure function you write for a question simply returns `(width_pt, height_pt, draw_fn(c, x, y))`,
 where `(x, y)` is the bottom-left corner of the figure box on the ReportLab canvas `c`.
 
-### Step 5: Build both PDFs and inspect every page visually
-Render every page of **both** the worksheet PDF and the answer key PDF to images in `scratch/` and view them:
+### Step 5: Build the PDF and inspect every page visually
+Render every page of the generated worksheet PDF (including the problem pages and the final answer key page) to images in `scratch/` and view them:
 ```python
-for pdf_name, prefix in [(OUT, "out"), (OUT_KEY, "ans")]:
-    d = fitz.open(pdf_name)
-    for i, p in enumerate(d):
-        p.get_pixmap(dpi=90).save(f"scratch/{prefix}_p{i+1}.png")
+d = fitz.open(out_pdf)
+for i, p in enumerate(d):
+    p.get_pixmap(dpi=90).save(f"scratch/out_p{i+1}.png")
 ```
 Verify:
 1. All text and answer choices `A)`–`E)` are visible (nothing accidentally drawn in white).
 2. The redrawn figures accurately match the original question and the new variations.
 3. No watermarks ("DO NOT COPY" must never appear — never paste bitmap crops from the source PDF).
-4. The worksheet PDF has **no answers** in it, and the separate `_answers.pdf` has all answers and clear explanations.
+4. Problem pages contain **no answers**, and the final page(s) contain the full answer key with clear, kid-friendly explanations.
 
 ---
 
@@ -145,5 +144,5 @@ a new dedicated `q_<year>_<number>(d, key, set_num)` function for it!
    your question and its options.
 3. **Check figure scale visually:** In Run #1, the house net was initially too small (`s=19`) to read the window/door
    markings clearly and had to be bumped to `s=27`. Always inspect the rendered PNGs of your output PDF.
-4. **Answer key is ALWAYS a separate file:** Never put the answer key at the end of the worksheet PDF. Always
-   generate `<prefix>.pdf` and `<prefix>_answers.pdf`.
+4. **Answer key is ALWAYS on the last page of the PDF:** Never generate a separate answer key PDF file. Always
+   append the answer key starting on a fresh new page at the very end of the worksheet PDF.
