@@ -94,17 +94,30 @@ Rules that worked well:
 - Wording must suit the grade level of the paper.
 
 ### Step 5: Write a generator script and build both PDFs
-**Don't edit or overwrite `generate_practice.py`.** It reproduces the first run and serves as the shared
-helper library. Make a new script (e.g. `generate_2007.py`) that **imports the helpers**:
+**Don't overwrite the existing `practice_2002_2003*.pdf` files.** Make a new script for each run
+(e.g. `generate_set_2.py`) that imports the layout engine and existing helpers from `generate_practice.py`:
 ```python
-from generate_practice import *   # Doc, write_answer_key, option_row, fig_* helpers, checkers
-OUT = "practice_2007.pdf"
-OUT_KEY = "practice_2007_answers.pdf"
+from generate_practice import *   # Doc, write_answer_key, option_row, vstack, hstack, fig_*
+OUT = "practice_set_2.pdf"
+OUT_KEY = "practice_set_2_answers.pdf"
 ```
-Write your own `build()` modelled on the one in `generate_practice.py`:
+**IMPORTANT — `generate_practice.py` only has `fig_*` functions for the 6 problem types from Run #1!**
+For every question the user picks, check which category it falls into:
+- **Category 1: Pure text / word / arithmetic / logic problem (no picture)**
+  Supported out of the box! Pass `fig=None` and `choices=[...]`:
+  ```python
+  d.problem("Original 2003 #7.", "In the teachers' room there are 6 tables...", choices=[40, 25, 50, 36, 44])
+  ```
+- **Category 2: Picture problem that matches an existing `fig_*` helper**
+  Reuse the helper from `generate_practice.py` (see table in §5).
+- **Category 3: Picture problem with a NEW kind of diagram or visual**
+  **You MUST write a new `fig_<name>(...)` function** in your script (and optionally add it to
+  `generate_practice.py` so future runs can reuse it). Every `fig_*` function follows the exact same
+  3-tuple contract `(width, height, draw_fn)` — see §5 below for the template.
+
+Then in `build()`:
 1. Create `d = Doc(OUT)`, draw the title and sets, and call `d.save()`.
 2. Call `write_answer_key(OUT_KEY, title, subtitle, key)` to generate the separate answer key PDF.
-3. Add new `fig_*` drawing functions when a problem type is new.
 
 ### Step 6: Check both PDFs visually
 Render every page of **both** output PDFs (`OUT` and `OUT_KEY`) and **look at each one**:
@@ -123,21 +136,57 @@ new problems), the answers you worked out for the originals, and offer next step
 
 ---
 
-## 5. How `generate_practice.py` works
+## 5. How the Layout Engine Works & How to Write New `fig_*` Functions
 
-**Layout (`Doc` class & `write_answer_key`)**
+### Universal Layout Engine (`Doc` class & combinators) — works for ANY problem
 - `Doc(path)`: a US-Letter canvas with a page-number footer.
 - `d.heading(title, subtitle)`: a section header with a horizontal line.
 - `d.problem(label, html_text, fig=None, fig_pos="right"|"below", choices=None, choice_cols=5)`
-  - `fig` is a tuple `(width, height, drawfn(canvas, x, y_bottom))`.
-  - `choices` is a list of 5 strings or numbers, shown as `A) … E)`. Use `choice_cols=3` for long choices.
-  - It adds a page break automatically when the problem doesn't fit.
-- `option_row(items)`: draws picture choices in a row labelled A)–E).
-- `vstack(figs)` / `hstack(figs)`: put figures in a column or a row.
+  - **No figure (word/number problem):** omit `fig` (or pass `fig=None`) and pass `choices=[...]`.
+  - **Single figure next to text:** pass `fig=(w, h, draw_fn)`, `fig_pos="right"`, and `choices=[...]`.
+  - **Large figure or visual A–E choices below text:** pass `fig=(w, h, draw_fn)`, `fig_pos="below"`, `choices=None`.
+  - Use `choice_cols=3` when text choices are phrases (e.g. `"2 oranges"`), or `choice_cols=5` for short numbers/words.
+  - Automatically inserts a page break when a problem doesn't fit on the current page.
+- `option_row([figA, figB, figC, figD, figE], gap=18)`: takes 5 `(w, h, draw_fn)` figures and arranges them
+  horizontally with bold `A) ... E)` labels.
+- `vstack([fig1, fig2, ...], gap=12)` / `hstack([fig1, fig2, ...], gap=20)`: stack multiple figures vertically
+  or side-by-side into a single `(w, h, draw_fn)` figure (for example, `vstack([main_diagram, option_row(option_figs)])`).
 - `write_answer_key(path, title, subtitle, key)`: writes the `(label, letter, explanation)` list into a
   standalone answer-key PDF.
 
-**Figure helpers and checkers that already exist**
+### Template for writing a NEW `fig_*` function (when a problem has a new diagram type)
+Whenever you encounter a visual problem not covered by the table below (clocks, number sequences in shapes,
+mazes, grids, geometric figures, bar charts, matchsticks, cubes/tunnels, etc.), write a new function that
+returns `(width_pt, height_pt, draw_fn)`:
+
+```python
+def fig_my_new_diagram(param1, param2, scale=20):
+    W = ...  # total width in points
+    H = ...  # total height in points
+
+    def draw(c, x, y):
+        # (x, y) is the bottom-left corner of the figure box on the ReportLab canvas c.
+        c.setLineWidth(1.2)
+        c.setStrokeColor(colors.black)
+        c.setFillColor(colors.black)
+
+        # Draw using ReportLab primitives:
+        #   c.line(x1, y1, x2, y2)
+        #   c.rect(rx, ry, rw, rh, stroke=1, fill=0)
+        #   c.circle(cx, cy, r, stroke=1, fill=1)
+        #   c.drawCentredString(tx, ty, "text")
+        #   p = c.beginPath(); p.moveTo(...); p.lineTo(...); p.close(); c.drawPath(p, stroke=1, fill=1)
+
+        # ALWAYS reset fill and stroke color to black at the end!
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return W, H, draw
+```
+And whenever possible, write a small Python solver/checker (`assert ...`) that computes the answer from
+`param1, param2` so it is impossible to generate an ambiguous or unsolvable practice problem.
+
+### Existing `fig_*` helpers in `generate_practice.py` (from Run #1)
 
 | Problem type | Helpers | Automatic check |
 |---|---|---|
