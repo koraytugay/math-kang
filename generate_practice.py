@@ -2874,6 +2874,2079 @@ def q_2002_12(d, key, set_num=3, include_orig=True, num_practice=5):
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
 
+# ------------------------------------------------- Set: 2002 #15 Flag Silhouette in the Wind
+def fig_flag_silhouette(kind, s=1.0):
+    """Draw a flagpole and shaded flag silhouette of the specified kind."""
+    w = 54 * s
+    h = 54 * s
+
+    def draw(c, x, y):
+        px = x + 6 * s
+        py0 = y + 4 * s
+        py1 = y + 44 * s  # Top of attachment on pole (pole height = 40*s, attachment height = 30*s: py1-30*s to py1)
+        att_bot = y + 14 * s
+        att_top = y + 44 * s
+        fw = 36 * s
+
+        # Flag polygon vertices depending on kind
+        if kind == "flat":
+            # Full rectangular silhouette (like 2002 #15 C)
+            pts = [(px, att_bot), (px, att_top), (px + fw, att_top), (px + fw, att_bot)]
+        elif kind == "fold_up_top":
+            # Like 2002 #15 A: attached from att_bot to att_top, loose part rises slightly above att_top
+            pts = [
+                (px, att_bot),
+                (px, att_top),
+                (px + 8 * s, att_top),
+                (px + 8 * s, att_top + 6 * s),
+                (px + fw, att_top + 6 * s),
+                (px + fw, att_top - 2 * s),
+                (px + 8 * s, att_bot),
+            ]
+        elif kind == "torn_pole_bottom":
+            # Like 2002 #15 B (TORN!): missing lower half along the pole!
+            mid_y = (att_bot + att_top) / 2 + 3 * s
+            pts = [
+                (px, mid_y),
+                (px, att_top),
+                (px + fw + 4 * s, att_top),
+                (px + 14 * s, att_bot + 4 * s),
+                (px + 14 * s, mid_y),
+            ]
+        elif kind == "fold_diag_peak":
+            # Like 2002 #15 D: full attachment along pole, diagonal fold with peak on top
+            pts = [
+                (px, att_bot),
+                (px, att_top),
+                (px + 16 * s, att_top),
+                (px + 20 * s, att_top + 6 * s),
+                (px + 30 * s, att_top),
+                (px + fw + 2 * s, att_top),
+                (px + fw + 2 * s, att_top - 6 * s),
+            ]
+        elif kind == "slanted_right":
+            # Like 2002 #15 E: full attachment along pole, right edge slanted inward
+            pts = [
+                (px, att_bot),
+                (px, att_top),
+                (px + fw + 2 * s, att_top),
+                (px + fw + 2 * s, att_top - 6 * s),
+                (px + fw - 8 * s, att_bot),
+            ]
+        elif kind == "torn_pole_top":
+            # TORN: missing upper half along the pole!
+            mid_y = (att_bot + att_top) / 2 - 2 * s
+            pts = [
+                (px, att_bot),
+                (px, mid_y),
+                (px + 14 * s, mid_y),
+                (px + 14 * s, att_top),
+                (px + fw, att_top),
+                (px + fw - 6 * s, att_bot),
+            ]
+        elif kind == "torn_pole_middle":
+            # TORN: V-gap cut right out of the middle of the pole attachment!
+            mid_y = (att_bot + att_top) / 2
+            pts = [
+                (px, att_bot),
+                (px, mid_y - 6 * s),
+                (px + 12 * s, mid_y),
+                (px, mid_y + 6 * s),
+                (px, att_top),
+                (px + fw, att_top),
+                (px + fw, att_bot),
+            ]
+        elif kind == "giant_stretched":
+            # IMPOSSIBLE: horizontal length is fine, but vertical pole edge is fine, wait:
+            # What if there is a hole/split or detached from pole completely?
+            pts = [
+                (px + 10 * s, att_bot),
+                (px + 10 * s, att_top),
+                (px + fw + 4 * s, att_top),
+                (px + fw + 4 * s, att_bot),
+            ]
+        elif kind == "wavy_bottom":
+            pts = [
+                (px, att_bot),
+                (px, att_top),
+                (px + fw, att_top),
+                (px + fw - 4 * s, att_bot + 6 * s),
+                (px + 18 * s, att_bot),
+            ]
+        else:
+            pts = [(px, att_bot), (px, att_top), (px + fw, att_top), (px + fw, att_bot)]
+
+        p = c.beginPath()
+        p.moveTo(*pts[0])
+        for q in pts[1:]:
+            p.lineTo(*q)
+        p.close()
+        c.setFillColor(colors.Color(0.68, 0.70, 0.68))
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(1.0)
+        c.drawPath(p, stroke=1, fill=1)
+
+        # Draw thick vertical flagpole
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(2.6)
+        c.line(px, py0, px, py1 + 2 * s)
+        c.setLineWidth(1.0)
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_flag_silhouette(kinds, expected_idx, mode="impossible"):
+    torn_kinds = {"torn_pole_bottom", "torn_pole_top", "torn_pole_middle", "giant_stretched"}
+    if mode == "impossible":
+        matches = [i for i, k in enumerate(kinds) if k in torn_kinds]
+    else:
+        matches = [i for i, k in enumerate(kinds) if k not in torn_kinds]
+    assert matches == [expected_idx], f"Flag silhouette mismatch: {matches} vs {expected_idx}"
+
+
+def q_2002_15(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Flag Silhouette in the Wind", "Based on 2002, Problem 15")
+
+    orig_kinds = ["fold_up_top", "torn_pole_bottom", "flat", "fold_diag_peak", "slanted_right"]
+    check_flag_silhouette(orig_kinds, 1, mode="impossible")
+    if include_orig:
+        d.problem(
+            "Original 2002 #15.",
+            "From her window Karla looks at the wall of a house. There she can see the silhouette of a rectangular "
+            "flag flying in the wind. At five different moments she draws the silhouette. Which of the 5 pictures "
+            "cannot be right unless the flag is torn?",
+            option_row([fig_flag_silhouette(k) for k in orig_kinds], gap=14),
+            "below",
+        )
+        key.append((
+            "2002 #15",
+            "B",
+            "The rectangular flag is attached to the flagpole along its entire left vertical edge, so the segment "
+            "where the flag touches the pole must always keep its full height. In picture B, the lower half of the "
+            "left edge is missing from the pole, which is impossible unless the flag is torn away from the pole.",
+        ))
+
+    practices = [
+        (
+            ["flat", "fold_diag_peak", "torn_pole_top", "slanted_right", "wavy_bottom"],
+            2,
+            "impossible",
+            "Leo watches a rectangular banner attached along its left vertical edge to a flagpole. "
+            "He sketches 5 silhouettes as the wind blows. Which sketch <b>cannot</b> happen unless the banner is torn from the pole?",
+            "Because the left edge of the rectangular banner is fastened to the pole from top to bottom of the attachment, "
+            "the silhouette must touch the entire attachment segment along the pole. Sketch C is missing the upper half along the pole, "
+            "which can only happen if the banner is torn.",
+        ),
+        (
+            ["torn_pole_middle", "flat", "slanted_right", "fold_up_top", "fold_diag_peak"],
+            0,
+            "impossible",
+            "Maya draws 5 silhouettes of a rectangular flag flying in the wind. One silhouette is impossible "
+            "unless the flag is ripped along the pole. Which one is it?",
+            "In picture A, there is a triangular gap right along the middle of the flagpole where the flag is supposed to be "
+            "attached. Since the left edge is fixed to the pole, that gap cannot appear unless the flag is torn.",
+        ),
+        (
+            ["slanted_right", "fold_up_top", "wavy_bottom", "giant_stretched", "flat"],
+            3,
+            "impossible",
+            "Sam looks at the shadow of a rectangular flag fastened to a vertical pole. Which of the 5 shadows below "
+            "is <b>impossible</b> unless the flag has come completely loose from the pole?",
+            "In shadow D, there is an empty gap between the flagpole and the entire flag! Since the flag's left side is "
+            "attached directly to the pole, shadow D is impossible unless the flag is torn off the pole.",
+        ),
+        (
+            ["torn_pole_bottom", "torn_pole_top", "torn_pole_middle", "giant_stretched", "slanted_right"],
+            4,
+            "possible",
+            "Four of the 5 flag silhouettes below are impossible unless the rectangular flag is torn from the pole. "
+            "Which silhouette <b>can</b> happen with an intact flag?",
+            "Only in E is the flag attached continuously along its full vertical segment on the flagpole while the free right edge "
+            "folds slightly inward in the wind. In A, B, C, and D, parts of the flag are detached from the pole.",
+        ),
+    ]
+
+    for idx, (kinds, ans_idx, mode, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_flag_silhouette(kinds, ans_idx, mode=mode)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            option_row([fig_flag_silhouette(k) for k in kinds], gap=14),
+            "below",
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2002 #18 Pet Logic Deduction
+def check_logic_matching(people, items, valid_fn, choices_check_fn, expected_idx):
+    valid_assignments = []
+    for perm in itertools.permutations(items):
+        assign = dict(zip(people, perm))
+        if valid_fn(assign):
+            valid_assignments.append(assign)
+    assert len(valid_assignments) == 1, f"Expected unique valid assignment, got {len(valid_assignments)}: {valid_assignments}"
+    sol = valid_assignments[0]
+    matches = [i for i, fn in enumerate(choices_check_fn) if fn(sol)]
+    assert matches == [expected_idx], f"Expected choice {expected_idx}, got {matches} for sol={sol}"
+
+
+def q_2002_18(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Logic Deduction: Matching Pets & Items", "Based on 2002, Problem 18")
+
+    # Original 2002 #18
+    people0 = ["Julien", "Manon", "Nicolas", "Fabienne"]
+    pets0 = ["cat", "dog", "parrot", "goldfish"]
+    furry0 = {"cat", "dog"}
+    four_legs0 = {"cat", "dog"}
+    bird0 = {"parrot"}
+    check_logic_matching(
+        people0,
+        pets0,
+        lambda a: (a["Manon"] in furry0 and a["Fabienne"] in four_legs0 and a["Nicolas"] in bird0 and a["Manon"] != "cat"),
+        [
+            lambda a: a["Fabienne"] != "dog",      # A: "Fabienne has a dog" is NOT true
+            lambda a: a["Nicolas"] != "parrot",    # B: "Nicolas has a parrot" is NOT true
+            lambda a: a["Julien"] != "goldfish",   # C: "Julien has a goldfish" is NOT true
+            lambda a: a["Fabienne"] != "cat",      # D: "Fabienne has a cat" is NOT true
+            lambda a: a["Manon"] != "dog",         # E: "Manon has a dog" is NOT true
+        ],
+        0,
+    )
+    if include_orig:
+        d.problem(
+            "Original 2002 #18.",
+            "Julien, Manon, Nicolas and Fabienne each have a different pet: a cat, a dog, a parrot and a goldfish. "
+            "Manon has a furry animal, Fabienne owns a four-legged creature, Nicolas has a bird and Manon doesn't like cats. "
+            "Which statement is <b>not</b> true?",
+            choices=[
+                "Fabienne has a dog",
+                "Nicolas has a parrot",
+                "Julien has a goldfish",
+                "Fabienne has a cat",
+                "Manon has a dog",
+            ],
+            choice_cols=3,
+        )
+        key.append((
+            "2002 #18",
+            "A",
+            "Nicolas has the bird, so Nicolas has the parrot. Manon has a furry animal (cat or dog) and doesn't like cats, "
+            "so Manon has the dog. Fabienne has a four-legged creature (cat or dog), which must be the cat. "
+            "That leaves the goldfish for Julien. Therefore, 'Fabienne has a dog' (A) is NOT true.",
+        ))
+
+    practices = [
+        # Practice .1: 4 kids (Anna, Ben, Clara, David), pets (rabbit, hamster, turtle, canary). Answer: C
+        (
+            ["Anna", "Ben", "Clara", "David"],
+            ["rabbit", "hamster", "turtle", "canary"],
+            lambda a: (
+                a["Ben"] in {"rabbit", "hamster"}
+                and a["Clara"] in {"rabbit", "hamster"}
+                and a["David"] == "canary"
+                and a["Ben"] != "hamster"
+            ),
+            [
+                lambda a: a["Ben"] != "rabbit",
+                lambda a: a["David"] != "canary",
+                lambda a: a["Clara"] != "rabbit",  # False statement: "Clara has a rabbit"
+                lambda a: a["Anna"] != "turtle",
+                lambda a: a["Clara"] != "hamster",
+            ],
+            [
+                "Ben has a rabbit",
+                "David has a canary",
+                "Clara has a rabbit",
+                "Anna has a turtle",
+                "Clara has a hamster",
+            ],
+            2,
+            "Anna, Ben, Clara, and David each own a different pet: a rabbit, a hamster, a turtle, and a canary. "
+            "Ben and Clara both own furry pets, David owns a bird, and Ben does not have the hamster. "
+            "Which statement is <b>not</b> true?",
+            "David has the bird (canary). The two furry pets are the rabbit and the hamster, belonging to Ben and Clara. "
+            "Since Ben does not have the hamster, Ben has the rabbit and Clara has the hamster. "
+            "That leaves the turtle for Anna. Thus, 'Clara has a rabbit' (C) is not true.",
+        ),
+        # Practice .2: 4 friends (Eva, Finn, Grace, Henry), instruments (violin, guitar, flute, drums). Answer: D
+        (
+            ["Eva", "Finn", "Grace", "Henry"],
+            ["violin", "guitar", "flute", "drums"],
+            lambda a: (
+                a["Eva"] in {"violin", "guitar"}
+                and a["Grace"] in {"violin", "guitar"}
+                and a["Finn"] == "drums"
+                and a["Eva"] != "violin"
+            ),
+            [
+                lambda a: a["Eva"] != "guitar",
+                lambda a: a["Finn"] != "drums",
+                lambda a: a["Grace"] != "violin",
+                lambda a: a["Henry"] != "guitar",  # False statement: "Henry plays the guitar"
+                lambda a: a["Henry"] != "flute",
+            ],
+            [
+                "Eva plays the guitar",
+                "Finn plays the drums",
+                "Grace plays the violin",
+                "Henry plays the guitar",
+                "Henry plays the flute",
+            ],
+            3,
+            "Eva, Finn, Grace, and Henry each play a different instrument: a violin, a guitar, a flute, and drums. "
+            "Eva and Grace play stringed instruments, Finn plays percussion (drums), and Eva does not play the violin. "
+            "Which statement is <b>not</b> true?",
+            "The stringed instruments are the violin and the guitar. Since Eva does not play the violin, Eva plays the guitar "
+            "and Grace plays the violin. Finn plays the drums, leaving the flute for Henry. "
+            "Therefore, 'Henry plays the guitar' (D) is not true.",
+        ),
+        # Practice .3: 4 kids (Leo, Mia, Noah, Olivia), snacks (apple, banana, cookie, pretzel). Ask what Olivia has -> E
+        (
+            ["Leo", "Mia", "Noah", "Olivia"],
+            ["apple", "banana", "cookie", "pretzel"],
+            lambda a: (
+                a["Leo"] in {"apple", "banana"}
+                and a["Mia"] in {"apple", "banana"}
+                and a["Noah"] == "cookie"
+                and a["Leo"] != "apple"
+            ),
+            [
+                lambda a: a["Olivia"] == "apple",
+                lambda a: a["Olivia"] == "banana",
+                lambda a: a["Olivia"] == "cookie",
+                lambda a: a["Leo"] == "apple",
+                lambda a: a["Olivia"] == "pretzel",
+            ],
+            [
+                "Olivia has the apple",
+                "Olivia has the banana",
+                "Olivia has the cookie",
+                "Leo has the apple",
+                "Olivia has the pretzel",
+            ],
+            4,
+            "Leo, Mia, Noah, and Olivia each brought a different snack: an apple, a banana, a cookie, and a pretzel. "
+            "Leo and Mia brought fruits, Noah brought the cookie, and Leo does not like apples. "
+            "Which statement is <b>true</b>?",
+            "Leo and Mia have the two fruits (apple and banana). Since Leo does not like apples, Leo has the banana and "
+            "Mia has the apple. Noah has the cookie, which leaves the pretzel for Olivia. So statement E is true.",
+        ),
+        # Practice .4: 4 athletes (Sam, Tara, Uma, Vic), sports (soccer, tennis, swimming, cycling). Answer: B
+        (
+            ["Sam", "Tara", "Uma", "Vic"],
+            ["soccer", "tennis", "swimming", "cycling"],
+            lambda a: (
+                a["Sam"] in {"soccer", "tennis"}
+                and a["Uma"] in {"soccer", "tennis"}
+                and a["Tara"] == "swimming"
+                and a["Sam"] != "soccer"
+            ),
+            [
+                lambda a: a["Sam"] != "tennis",
+                lambda a: a["Uma"] != "tennis",  # False statement: "Uma plays tennis"
+                lambda a: a["Tara"] != "swimming",
+                lambda a: a["Vic"] != "cycling",
+                lambda a: a["Uma"] != "soccer",
+            ],
+            [
+                "Sam plays tennis",
+                "Uma plays tennis",
+                "Tara does swimming",
+                "Vic does cycling",
+                "Uma plays soccer",
+            ],
+            1,
+            "Sam, Tara, Uma, and Vic each do a different sport: soccer, tennis, swimming, and cycling. "
+            "Sam and Uma play sports with a ball, Tara is in the pool, and Sam does not play soccer. "
+            "Which statement is <b>not</b> true?",
+            "The two ball sports are soccer and tennis. Since Sam does not play soccer, Sam plays tennis and Uma plays soccer. "
+            "Tara does swimming, leaving cycling for Vic. Thus, 'Uma plays tennis' (B) is not true.",
+        ),
+    ]
+
+    for idx, (p_list, it_list, v_fn, c_fns, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_logic_matching(p_list, it_list, v_fn, c_fns, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+            choice_cols=3,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2002 #20 Cube Tunnel to Pyramid
+def make_tunnel_cubes(outer_w, outer_h, hole_w, hole_h, depth):
+    """Build a set of (ix, iy, iz) unit cubes for a tunnel with centered/bottom hole."""
+    cubes = set()
+    x0 = (outer_w - hole_w) // 2
+    y0 = (outer_h - hole_h) // 2
+    for iz in range(depth):
+        for iy in range(outer_h):
+            for ix in range(outer_w):
+                if not (x0 <= ix < x0 + hole_w and y0 <= iy < y0 + hole_h):
+                    cubes.add((ix, iy, iz))
+    return cubes
+
+
+def make_stepped_pyramid_cubes(layer_specs):
+    """layer_specs: list of (size_w, size_d, num_layers) from bottom to top, centered on bottom layer."""
+    cubes = set()
+    base_w, base_d, _ = layer_specs[0]
+    cur_y = 0
+    for w, d_len, h_layers in layer_specs:
+        x0 = (base_w - w) // 2
+        z0 = (base_d - d_len) // 2
+        for dy in range(h_layers):
+            for iz in range(z0, z0 + d_len):
+                for ix in range(x0, x0 + w):
+                    cubes.add((ix, cur_y + dy, iz))
+        cur_y += h_layers
+    return cubes
+
+
+def fig_cube_structure(cubes, s=11, label=None):
+    """Render an arbitrary 3D set of (ix, iy, iz) unit cubes back-to-front."""
+    kx = s * 0.35
+    ky = s * 0.30
+    max_x = max(p[0] for p in cubes) + 1
+    max_y = max(p[1] for p in cubes) + 1
+    max_z = max(p[2] for p in cubes) + 1
+
+    label_h = 14 if label else 0
+    w = max_x * s + max_z * kx + 8
+    h = max_y * s + max_z * ky + 8 + label_h
+
+    def draw(c, x, y):
+        ox = x + 4
+        oy = y + 4 + label_h
+
+        def pt(ix, iy, iz):
+            return ox + ix * s + iz * kx, oy + iy * s + iz * ky
+
+        def poly(pts, fill=colors.white, stroke=colors.black, lw=0.75):
+            p = c.beginPath()
+            p.moveTo(*pts[0])
+            for q in pts[1:]:
+                p.lineTo(*q)
+            p.close()
+            c.setFillColor(fill)
+            c.setStrokeColor(stroke)
+            c.setLineWidth(lw)
+            c.drawPath(p, stroke=1, fill=1)
+
+        SIDE_SHADE = colors.Color(0.82, 0.80, 0.76)
+        TOP_SHADE = colors.Color(0.96, 0.96, 0.96)
+
+        for iz in range(max_z - 1, -1, -1):
+            for iy in range(max_y):
+                for ix in range(max_x):
+                    if (ix, iy, iz) in cubes:
+                        if (ix + 1, iy, iz) not in cubes:
+                            poly(
+                                [pt(ix + 1, iy, iz), pt(ix + 1, iy, iz + 1), pt(ix + 1, iy + 1, iz + 1), pt(ix + 1, iy + 1, iz)],
+                                fill=SIDE_SHADE,
+                            )
+                        if (ix, iy + 1, iz) not in cubes:
+                            poly(
+                                [pt(ix, iy + 1, iz), pt(ix + 1, iy + 1, iz), pt(ix + 1, iy + 1, iz + 1), pt(ix, iy + 1, iz + 1)],
+                                fill=TOP_SHADE,
+                            )
+                        if (ix, iy, iz - 1) not in cubes:
+                            poly(
+                                [pt(ix, iy, iz), pt(ix + 1, iy, iz), pt(ix + 1, iy + 1, iz), pt(ix, iy + 1, iz)],
+                                fill=colors.white,
+                            )
+
+        if label:
+            c.setFillColor(colors.black)
+            c.setFont("Times-Roman", 10)
+            c.drawCentredString(x + w / 2, y + 2, label)
+
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_tunnel_pyramid(t_cubes, p_cubes, choices, ans_idx):
+    unused = len(t_cubes) - len(p_cubes)
+    matches = [i for i, ch in enumerate(choices) if int(ch) == unused]
+    assert matches == [ans_idx], f"Tunnel/pyramid unused={unused}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2002_20(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Rearranging 3D Cube Tunnel into a Pyramid", "Based on 2002, Problem 20")
+
+    # Original 2002 #20:
+    # Tunnel: 5x5 front with 3x3 hole (16 cubes per layer), 4 layers deep -> 64 cubes.
+    # Pyramid (3-step pyramid 5x5 + 3x3 + 1x1 = 25 + 9 + 1 = 35 cubes -> 64 - 35 = 29 unused, Choice B)
+    t0 = make_tunnel_cubes(5, 5, 3, 3, 4)
+    p0 = make_stepped_pyramid_cubes([(5, 5, 1), (3, 3, 1), (1, 1, 1)])
+    opts0 = ["34", "29", "22", "18", "15"]
+    check_tunnel_pyramid(t0, p0, opts0, 1)
+    if include_orig:
+        fig0 = hstack([
+            fig_cube_structure(t0, s=10, label="fig.1"),
+            fig_cube_structure(p0, s=10, label="fig.2"),
+        ], gap=18)
+        d.problem(
+            "Original 2002 #20.",
+            "Robert made a tunnel using some identical cubes (fig.1). When he got bored, he rearranged the tunnel "
+            "into a complete 3-layer stepped pyramid (fig.2: a 5×5 bottom layer, a 3×3 middle layer, and 1 top cube). "
+            "How many cubes from the original tunnel did he <i>not</i> use for the pyramid?",
+            fig0,
+            "right",
+            opts0,
+        )
+        key.append((
+            "2002 #20",
+            "B",
+            "Each of the 4 depth layers of the tunnel is a 5 × 5 square (25 cubes) with a 3 × 3 hole (9 cubes) removed, "
+            "giving 25 - 9 = 16 cubes per layer, or 4 × 16 = 64 cubes in total. "
+            "The 3-layer pyramid uses 5×5 + 3×3 + 1×1 = 25 + 9 + 1 = 35 cubes. "
+            "So 64 - 35 = 29 cubes were not used.",
+        ))
+
+    practices = [
+        # Practice .1: Tunnel 5x5 with 3x3 hole, 3 layers deep = 3 * 16 = 48 cubes.
+        # Pyramid: 5x5 + 3x3 + 1x1 = 35 cubes. Unused = 48 - 35 = 13 cubes (Answer: A)
+        (
+            make_tunnel_cubes(5, 5, 3, 3, 3),
+            make_stepped_pyramid_cubes([(5, 5, 1), (3, 3, 1), (1, 1, 1)]),
+            ["13", "15", "18", "21", "23"],
+            0,
+            "Leo built a tunnel 3 cubes deep with a 5 × 5 outer frame and a 3 × 3 tunnel opening (fig.1). "
+            "He then used some of those cubes to build a 3-layer stepped pyramid with 5 × 5, 3 × 3, and 1 × 1 layers (fig.2). "
+            "How many cubes from the tunnel were left over?",
+            "Each of the 3 layers of the tunnel has 5×5 - 3×3 = 25 - 9 = 16 cubes, so the tunnel has 3 × 16 = 48 cubes. "
+            "The pyramid uses 25 + 9 + 1 = 35 cubes. That leaves 48 - 35 = 13 cubes unused.",
+        ),
+        # Practice .2: Tunnel 4x4 with 2x2 hole, 4 layers deep = 4 * (16 - 4) = 48 cubes.
+        # Pyramid: 3-layer stepped pyramid of 4x4 + 2x2 + 1x1? To stay centered, 4x4 + 2x2 = 16 + 4 = 20 cubes (2-layer stepped platform)
+        # Or 4x4 (16) + 3x3 (9) + 2x2 (4) + 1x1 (1) = 30 cubes! Wait: let's use 5x5 with 3x3 hole, 4 layers deep (64 cubes)
+        # and pyramid with 2-cube-high 3x3 layer and 3-cube-high 1x1 spire (25 + 18 + 3 = 46 cubes) -> 64 - 46 = 18 (Answer: D)!
+        (
+            make_tunnel_cubes(5, 5, 3, 3, 4),
+            make_stepped_pyramid_cubes([(5, 5, 1), (3, 3, 2), (1, 1, 3)]),
+            ["12", "14", "16", "18", "22"],
+            3,
+            "Clara built a tunnel 4 cubes deep with a 5 × 5 outer square and a 3 × 3 opening (fig.1). "
+            "She rearranged the cubes into a tall tower-pyramid (fig.2) consisting of one 5 × 5 base layer, "
+            "two 3 × 3 middle layers, and three single cubes stacked on top. How many cubes from the tunnel did she <i>not</i> use?",
+            "The tunnel has 4 layers of 5×5 - 3×3 = 16 cubes, totaling 4 × 16 = 64 cubes. "
+            "The tower-pyramid uses 25 + (2 × 9) + (3 × 1) = 25 + 18 + 3 = 46 cubes. "
+            "So 64 - 46 = 18 cubes were not used.",
+        ),
+        # Practice .3: Tunnel 4x4 with 2x2 hole, 3 layers deep = 3 * 12 = 36 cubes.
+        # Stepped block (fig.2): 4x4 bottom layer (16) + 2x2 top layer (4) = 20 cubes. Unused = 36 - 20 = 16 (Answer: C)
+        (
+            make_tunnel_cubes(4, 4, 2, 2, 3),
+            make_stepped_pyramid_cubes([(4, 4, 1), (2, 2, 1)]),
+            ["10", "12", "16", "20", "24"],
+            2,
+            "Max made a tunnel 3 cubes deep using a 4 × 4 square frame with a 2 × 2 hole in the center (fig.1). "
+            "Then he built a 2-step pedestal (fig.2) with a 4 × 4 bottom layer (1 cube high) and a 2 × 2 top layer (1 cube high). "
+            "How many cubes from the tunnel were <i>not</i> used?",
+            "Each of the 3 tunnel layers contains 4×4 - 2×2 = 16 - 4 = 12 cubes, so the tunnel has 3 × 12 = 36 cubes in total. "
+            "The 2-step pedestal uses 4×4 + 2×2 = 16 + 4 = 20 cubes. Therefore, 36 - 20 = 16 cubes were not used.",
+        ),
+        # Practice .4: Tunnel 4x4 with 2x2 hole, 4 layers deep = 4 * 12 = 48 cubes.
+        # Stepped pedestal (fig.2): 4x4 bottom layer (16) + two 2x2 layers (8) = 24 cubes. Unused = 48 - 24 = 24 (Answer: E)
+        (
+            make_tunnel_cubes(4, 4, 2, 2, 4),
+            make_stepped_pyramid_cubes([(4, 4, 1), (2, 2, 2)]),
+            ["14", "16", "18", "20", "24"],
+            4,
+            "Zoe built a tunnel 4 cubes deep with a 4 × 4 outer square and a 2 × 2 center hole (fig.1). "
+            "She rearranged some of the cubes into a monument (fig.2) with one 4 × 4 base layer and two 2 × 2 layers on top. "
+            "How many cubes from the tunnel did she <i>not</i> use?",
+            "Each of the 4 layers of the tunnel has 16 - 4 = 12 cubes, giving 4 × 12 = 48 cubes in total. "
+            "The monument uses 16 + 2 × 4 = 24 cubes. Thus, 48 - 24 = 24 cubes were left over.",
+        ),
+    ]
+
+    for idx, (tc, pc, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_tunnel_pyramid(tc, pc, opts, ans_idx)
+        fig_p = hstack([
+            fig_cube_structure(tc, s=10, label="fig.1"),
+            fig_cube_structure(pc, s=10, label="fig.2"),
+        ], gap=18)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            fig_p,
+            "right",
+            opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2002 #21 Three Digit Cards & Four Operations
+def can_reach_target_3cards(cards, target):
+    """Return a string formula if the 3 cards can make `target` using +, -, *, / (exact division) and parentheses, else None."""
+    ops = [
+        ("+", lambda a, b: a + b),
+        ("-", lambda a, b: a - b),
+        ("×", lambda a, b: a * b),
+        ("÷", lambda a, b: a // b if b != 0 and a % b == 0 else None),
+    ]
+    for x, y, z in itertools.permutations(cards):
+        for s1, f1 in ops:
+            for s2, f2 in ops:
+                r1 = f1(x, y)
+                if r1 is not None:
+                    r2 = f2(r1, z)
+                    if r2 == target:
+                        return f"({x} {s1} {y}) {s2} {z} = {target}"
+                r3 = f2(y, z)
+                if r3 is not None:
+                    r4 = f1(x, r3)
+                    if r4 == target:
+                        return f"{x} {s1} ({y} {s2} {z}) = {target}"
+    return None
+
+
+def check_cards_target(players_cards, target, expected_unsolvable_names):
+    unsolvable = [name for name, cards in players_cards if can_reach_target_3cards(cards, target) is None]
+    assert unsolvable == expected_unsolvable_names, (
+        f"For target={target}, expected unsolvable={expected_unsolvable_names}, got {unsolvable}"
+    )
+
+
+def q_2002_21(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Making a Target Number with Three Digit Cards", "Based on 2002, Problem 21")
+
+    # Original 2002 #21: Alex (7,2,4), Martha (6,5,1), Fred (8,3,9), target = 20 -> Martha cannot get 20 (B)
+    p0 = [("Alex", (7, 2, 4)), ("Martha", (6, 5, 1)), ("Fred", (8, 3, 9))]
+    check_cards_target(p0, 20, ["Martha"])
+    if include_orig:
+        d.problem(
+            "Original 2002 #21.",
+            "The digits from 1 to 9 are written on 9 cards. Alex has the digits 7, 2 and 4; Martha has the digits "
+            "6, 5 and 1; and Fred has 8, 3 and 9. Each of them uses some of the four basic operations + (addition), "
+            "- (subtraction), × (multiplication), ÷ (division), and each of his own cards exactly once. "
+            "Who cannot obtain 20 as a result?",
+            choices=["Alex", "Martha", "Fred", "All can get 20", "Alex and Martha"],
+            choice_cols=3,
+        )
+        key.append((
+            "2002 #21",
+            "B",
+            "Alex can make 20 with (7 - 2) × 4 = 20. Fred can make 20 with 8 + 3 + 9 = 20. "
+            "With Martha's cards (6, 5, 1), no combination of +, -, ×, ÷ gives 20 (the closest results are "
+            "6 × (5 - 1) = 24 and 5 × (6 - 1) = 25). So Martha cannot obtain 20.",
+        ))
+
+    practices = [
+        # Practice .1: Target 18. Leo (9, 4, 2) -> (9-2)*? No, 9*4/2 = 18! Mia (7, 5, 1) -> cannot get 18! Noah (6, 8, 4) -> 6+8+4=18. Answer: B (Mia)
+        (
+            [("Leo", (9, 4, 2)), ("Mia", (7, 5, 1)), ("Noah", (6, 8, 4))],
+            18,
+            ["Mia"],
+            ["Leo", "Mia", "Noah", "All can get 18", "Leo and Noah"],
+            1,
+            "Three friends each have 3 digit cards: Leo has 9, 4, and 2; Mia has 7, 5, and 1; and Noah has 6, 8, and 4. "
+            "Using the operations +, -, ×, ÷ and each of their own three cards once, who <b>cannot</b> obtain <b>18</b> as a result?",
+            "Leo can make 18 as (9 × 4) ÷ 2 = 18. Noah can make 18 as 6 + 8 + 4 = 18. "
+            "Mia's cards (7, 5, 1) can make 13, 21, 28, 34, 35, 36, or 42, but never 18. So Mia cannot obtain 18.",
+        ),
+        # Practice .2: Target 15. Anna (8, 4, 1) -> cannot get 15! Ben (6, 3, 2) -> 6*3-? No: (6+2)*? Wait: 6*2+3 = 15! Clara (9, 5, 1) -> 9+5+1 = 15! Answer: A (Anna)
+        (
+            [("Anna", (8, 4, 1)), ("Ben", (6, 3, 2)), ("Clara", (9, 5, 1))],
+            15,
+            ["Anna"],
+            ["Anna", "Ben", "Clara", "All can get 15", "Ben and Clara"],
+            0,
+            "Anna has cards 8, 4, and 1; Ben has cards 6, 3, and 2; and Clara has cards 9, 5, and 1. "
+            "Each person uses +, -, ×, ÷ and all three of their own cards exactly once. Who <b>cannot</b> obtain <b>15</b>?",
+            "Ben can get 15 with 6 × 2 + 3 = 15, and Clara can get 15 with 9 + 5 + 1 = 15. "
+            "With Anna's cards (8, 4, 1), no combination of operations produces 15. So the answer is Anna.",
+        ),
+        # Practice .3: Target 24. Dan (8, 2, 1) -> 8*(2+1)=24. Eva (9, 7, 8) -> 9+7+8=24. Finn (5, 4, 2) -> cannot get 24! Answer: C (Finn)
+        (
+            [("Dan", (8, 2, 1)), ("Eva", (9, 7, 8)), ("Finn", (5, 4, 2))],
+            24,
+            ["Finn"],
+            ["Dan", "Eva", "Finn", "All can get 24", "Dan and Eva"],
+            2,
+            "Dan has cards 8, 2, and 1; Eva has cards 9, 7, and 8; and Finn has cards 5, 4, and 2. "
+            "Using +, -, ×, ÷ and each of their own three cards once, who <b>cannot</b> obtain <b>24</b>?",
+            "Dan can get 24 with 8 × (2 + 1) = 24. Eva can get 24 with 9 + 7 + 8 = 24. "
+            "Finn's cards (5, 4, 2) can make 5 × 4 + 2 = 22 or (5 + 2) × 4 = 28, but never 24. So Finn cannot obtain 24.",
+        ),
+        # Practice .4: Target 16. Ruby (8, 6, 4) -> 8*6/4 = 12, 8+6+4=18, (8-4)*6=24, (6-4)*8=16!
+        # Sam (5, 3, 2) -> (5+3)*2 = 16! Toby (9, 4, 3) -> 9+4+3 = 16! All can get 16 -> Answer: D
+        (
+            [("Ruby", (8, 6, 4)), ("Sam", (5, 3, 2)), ("Toby", (9, 4, 3))],
+            16,
+            [],
+            ["Ruby", "Sam", "Toby", "All can get 16", "Ruby and Sam"],
+            3,
+            "Ruby has cards 8, 6, and 4; Sam has cards 5, 3, and 2; and Toby has cards 9, 4, and 3. "
+            "Using +, -, ×, ÷ and each of their three cards once, who <b>cannot</b> obtain <b>16</b>?",
+            "Ruby can make 16 with 8 × (6 - 4) = 16. Sam can make 16 with (5 + 3) × 2 = 16. "
+            "Toby can make 16 with 9 + 4 + 3 = 16. Therefore, all three of them can obtain 16!",
+        ),
+    ]
+
+    for idx, (p_cards, target, exp_unsolv, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_cards_target(p_cards, target, exp_unsolv)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+            choice_cols=3,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2002 #22 Seating Permutations with Fixed Spots
+def check_seating_ways(n_total, n_fixed, choices, ans_idx):
+    free = n_total - n_fixed
+    ways = math.factorial(free)
+    matches = [i for i, ch in enumerate(choices) if int(ch) == ways]
+    assert matches == [ans_idx], f"Seating ways={ways}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2002_22(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Seating Arrangements with Fixed Seats", "Based on 2002, Problem 22")
+
+    opts0 = ["3", "4", "6", "24", "25"]
+    check_seating_ways(4, 1, opts0, 2)
+    if include_orig:
+        d.problem(
+            "Original 2002 #22.",
+            "Four friends go to a restaurant and sit down at a table. John always sits at the same spot on the table. "
+            "In how many ways can the friends sit around the table?",
+            choices=opts0,
+        )
+        key.append((
+            "2002 #22",
+            "C",
+            "Since John always takes his fixed seat, only the other 3 friends change places among the remaining 3 seats. "
+            "The first friend has 3 choices, the second has 2 choices, and the third has 1 choice, giving 3 × 2 × 1 = 6 ways.",
+        ))
+
+    practices = [
+        # Practice .1: 5 friends, 2 always sit in their favorite chairs -> 3! = 6 ways (Answer: B)
+        (
+            5,
+            2,
+            ["3", "6", "12", "24", "120"],
+            1,
+            "Five friends sit on a bench with 5 seats at the park. Emma always sits on the far left seat, and Lucas "
+            "always sits on the far right seat. In how many different ways can the 5 friends sit on the bench?",
+            "Emma's and Lucas's seats are fixed, leaving 3 middle seats for the other 3 friends. "
+            "Those 3 friends can be arranged in 3 × 2 × 1 = 6 different ways.",
+        ),
+        # Practice .2: 5 family members at a dinner table, Grandma always sits at the head -> 4! = 24 ways (Answer: D)
+        (
+            5,
+            1,
+            ["4", "12", "16", "24", "120"],
+            3,
+            "Five family members sit around a dinner table with 5 chairs. Grandma always sits in the armchair at the "
+            "head of the table. In how many different ways can the family sit around the table?",
+            "With Grandma's seat fixed, the remaining 4 family members can sit in the other 4 chairs in "
+            "4 × 3 × 2 × 1 = 24 different ways.",
+        ),
+        # Practice .3: 4 astronauts in a 4-seat spacecraft, Commander and Pilot have fixed seats -> 2! = 2 ways (Answer: A)
+        (
+            4,
+            2,
+            ["2", "4", "6", "12", "24"],
+            0,
+            "Four astronauts board a spacecraft with 4 seats. The Commander must sit in Seat 1 and the Pilot must sit "
+            "in Seat 2. In how many different ways can the 4 astronauts be seated?",
+            "Seat 1 and Seat 2 are already fixed for the Commander and Pilot. The remaining 2 astronauts can sit in "
+            "Seats 3 and 4 in 2 × 1 = 2 ways.",
+        ),
+        # Practice .4: 4 runners posing for a photo, nobody has a fixed spot -> 4! = 24 ways (Answer: E)
+        (
+            4,
+            0,
+            ["4", "8", "12", "16", "24"],
+            4,
+            "Four friends stand in a line of 4 spots to take a team photo, and anyone can stand in any spot. "
+            "In how many different orders can the 4 friends stand in line?",
+            "There are 4 choices for the first spot, 3 for the second, 2 for the third, and 1 for the fourth, "
+            "giving 4 × 3 × 2 × 1 = 24 different orders.",
+        ),
+    ]
+
+    for idx, (ntot, nfix, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_seating_ways(ntot, nfix, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2002 #24 Odometer with Distinct Digits
+def next_distinct_digits_distance(start_num):
+    n = start_num + 1
+    while len(set(str(n))) != len(str(n)):
+        n += 1
+    return n - start_num, n
+
+
+def check_odometer_distinct(start_num, choices, ans_idx):
+    dist, _ = next_distinct_digits_distance(start_num)
+    matches = [i for i, ch in enumerate(choices) if int(ch) == dist]
+    assert matches == [ans_idx], f"Odometer start={start_num}, dist={dist}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2002_24(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Odometer with All Different Digits", "Based on 2002, Problem 24")
+
+    opts0 = ["1", "21", "431", "12431", "13776"]
+    check_odometer_distinct(187569, opts0, 1)
+    if include_orig:
+        d.problem(
+            "Original 2002 #24.",
+            "The odometer of my car indicates 187569. All the digits of this number are different. "
+            "After how many more kilometres will this happen again?",
+            choices=opts0,
+        )
+        key.append((
+            "2002 #24",
+            "B",
+            "Starting from 187569, numbers 187570–187579 repeat the digit 7, and 187580–187589 repeat the digit 8. "
+            "The very next number is 187590, whose digits (1, 8, 7, 5, 9, 0) are all different! "
+            "That takes 187590 - 187569 = 21 km.",
+        ))
+
+    practices = [
+        # Practice .1: Start = 264359. Next is 264370 (digits 2,6,4,3,7,0 all distinct!). Distance = 11 km (Answer: A)
+        (
+            264359,
+            ["11", "21", "31", "41", "141"],
+            0,
+            "A car's odometer shows <b>264359</b>, where all six digits are different. "
+            "After how many more kilometres will all six digits on the odometer be different again?",
+            "From 264359, the numbers 264360 through 264369 all repeat the digit 6. "
+            "The next number is 264370, which has digits 2, 6, 4, 3, 7, 0 — all different! "
+            "That is 264370 - 264359 = 11 km later.",
+        ),
+        # Practice .2: Start = 398675.
+        # 398676..398679: 398676(6), 398677(7), 398678(8), 398679(9)
+        # 39868x(8), 39869x(9), 39870x: 398701 has digits 3,9,8,7,0,1!
+        # Distance = 398701 - 398675 = 26 km (Answer: C)
+        (
+            398675,
+            ["5", "15", "26", "35", "126"],
+            2,
+            "An odometer reads <b>398675</b>, and all of its digits are different. "
+            "What is the smallest number of kilometres the car must travel until all six digits are different again?",
+            "Checking numbers after 398675: 398676–398679 repeat 6, 7, 8, or 9; 398680–398689 repeat 8; "
+            "and 398690–398699 repeat 9. At 398700 the 0 repeats, and then 398701 has all distinct digits (3, 9, 8, 7, 0, 1). "
+            "The distance is 398701 - 398675 = 26 km.",
+        ),
+        # Practice .3: 4-digit bike counter reads 1987.
+        # 1988..1989 (repeat 8,9), 1990..1999 (repeat 9), 2000..2011 (repeat 0 or 1), 2012 (repeat 2), 2013!
+        # Distance = 2013 - 1987 = 26 km (Answer: D)
+        (
+            1987,
+            ["3", "13", "16", "26", "36"],
+            3,
+            "A bicycle trip counter shows the 4-digit number <b>1987</b>, whose digits are all different. "
+            "After how many more kilometres will the counter next show a number with all four digits different?",
+            "Numbers 1988–1999 all repeat 8 or 9, and numbers 2000–2012 repeat 0, 1, or 2. "
+            "The first number after 1987 with four different digits is 2013 (digits 2, 0, 1, 3). "
+            "That happens after 2013 - 1987 = 26 km.",
+        ),
+        # Practice .4: Start = 476358. Next: 476359 (digits 4,7,6,3,5,9 all distinct!). Distance = 1 km (Answer: E)
+        (
+            476358,
+            ["12", "11", "9", "2", "1"],
+            4,
+            "The odometer of a bus shows <b>476358</b>, where every digit is different. "
+            "After how many more kilometres will all six digits be different again?",
+            "Adding just 1 km gives 476359, whose digits (4, 7, 6, 3, 5, 9) are already all different! "
+            "So it happens after just 1 km.",
+        ),
+    ]
+
+    for idx, (s_num, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_odometer_distinct(s_num, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2003 #10 Metric Length Conversion (dm, cm, mm)
+def check_metric_jump(dm_val, cm_val, mm_val, add_cm, choices_cm, ans_idx):
+    assert mm_val % 10 == 0
+    total_cm = dm_val * 10 + cm_val + (mm_val // 10) + add_cm
+    matches = [i for i, c_cm in enumerate(choices_cm) if c_cm == total_cm]
+    assert matches == [ans_idx], f"Metric jump total_cm={total_cm}, choices_cm={choices_cm}, ans_idx={ans_idx}"
+
+
+def q_2003_10(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Metric Length Conversion (m, dm, cm, mm)", "Based on 2003, Problem 10")
+
+    # Original 2003 #10: 50 dm + 50 cm + 50 mm + 123 cm = 500 + 50 + 5 + 123 = 678 cm = 6 m 78 cm (A)
+    check_metric_jump(50, 50, 50, 123, [678, 573, 555, 1128, 723], 0)
+    if include_orig:
+        d.problem(
+            "Original 2003 #10.",
+            "Jumpy the kangaroo has been training for the Animal Olympics. His longest jump during the training was "
+            "50 dm 50 cm and 50 mm long. He won the gold medal at the end of the Olympics with a jump that was "
+            "123 cm longer. How long was Jumpy's winning jump?",
+            choices=["6 m 78 cm", "5 m 73 cm", "5 m 55 cm", "11 m 28 cm", "7 m 23 cm"],
+            choice_cols=3,
+        )
+        key.append((
+            "2003 #10",
+            "A",
+            "Convert each part of the training jump to centimetres: 50 dm = 500 cm, 50 cm = 50 cm, and 50 mm = 5 cm. "
+            "So the training jump was 500 + 50 + 5 = 555 cm. Adding 123 cm gives 555 + 123 = 678 cm, which is 6 m 78 cm.",
+        ))
+
+    practices = [
+        # Practice .1: 40 dm + 40 cm + 40 mm + 135 cm = 400 + 40 + 4 + 135 = 579 cm = 5 m 79 cm (Answer: B)
+        (
+            40, 40, 40, 135,
+            [444, 579, 539, 615, 975],
+            ["4 m 44 cm", "5 m 79 cm", "5 m 39 cm", "6 m 15 cm", "9 m 75 cm"],
+            1,
+            "Hoppy the frog's practice jump was 40 dm, 40 cm, and 40 mm long. In the final round, he jumped "
+            "135 cm farther than his practice jump. How long was Hoppy's final jump?",
+            "Convert the practice jump to centimetres: 40 dm = 400 cm, 40 cm = 40 cm, and 40 mm = 4 cm, "
+            "giving 400 + 40 + 4 = 444 cm. Adding 135 cm gives 444 + 135 = 579 cm = 5 m 79 cm.",
+        ),
+        # Practice .2: 30 dm + 70 cm + 80 mm + 114 cm = 300 + 70 + 8 + 114 = 492 cm = 4 m 92 cm (Answer: C)
+        (
+            30, 70, 80, 114,
+            [378, 484, 492, 564, 1164],
+            ["3 m 78 cm", "4 m 84 cm", "4 m 92 cm", "5 m 64 cm", "11 m 64 cm"],
+            2,
+            "An athlete threw a javelin 30 dm, 70 cm, and 80 mm on her first try. Her second throw was 114 cm longer "
+            "than her first throw. How long was her second throw?",
+            "In centimetres, 30 dm = 300 cm, 70 cm = 70 cm, and 80 mm = 8 cm, so the first throw was 300 + 70 + 8 = 378 cm. "
+            "Adding 114 cm gives 378 + 114 = 492 cm, which is 4 m 92 cm.",
+        ),
+        # Practice .3: 60 dm + 30 cm + 90 mm + 145 cm = 600 + 30 + 9 + 145 = 784 cm = 7 m 84 cm (Answer: D)
+        (
+            60, 30, 90, 145,
+            [639, 735, 775, 784, 865],
+            ["6 m 39 cm", "7 m 35 cm", "7 m 75 cm", "7 m 84 cm", "8 m 65 cm"],
+            3,
+            "A paper airplane flew 60 dm, 30 cm, and 90 mm on its first flight. On its second flight, the wind helped "
+            "it fly 145 cm farther. What was the total distance of the second flight?",
+            "Converting to centimetres: 60 dm = 600 cm, 30 cm = 30 cm, and 90 mm = 9 cm, for a first flight of "
+            "600 + 30 + 9 = 639 cm. Adding 145 cm gives 639 + 145 = 784 cm = 7 m 84 cm.",
+        ),
+        # Practice .4: 20 dm + 80 cm + 60 mm - 45 cm = 200 + 80 + 6 - 45 = 241 cm = 2 m 41 cm (Answer: E)
+        (
+            20, 80, 60, -45,
+            [286, 331, 295, 235, 241],
+            ["2 m 86 cm", "3 m 31 cm", "2 m 95 cm", "2 m 35 cm", "2 m 41 cm"],
+            4,
+            "A wooden board is 20 dm, 80 cm, and 60 mm long. A carpenter saws off a piece that is 45 cm long. "
+            "How long is the remaining board?",
+            "Convert the initial length to centimetres: 20 dm = 200 cm, 80 cm = 80 cm, and 60 mm = 6 cm, "
+            "totaling 200 + 80 + 6 = 286 cm. Subtracting 45 cm leaves 286 - 45 = 241 cm = 2 m 41 cm.",
+        ),
+    ]
+
+    for idx, (dm_v, cm_v, mm_v, add_v, ch_cm, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_metric_jump(dm_v, cm_v, mm_v, add_v, ch_cm, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+            choice_cols=3,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2003 #16 Book Page Number Digits
+def total_digits_for_pages(n_pages):
+    return sum(len(str(p)) for p in range(1, n_pages + 1))
+
+
+def check_pages_from_digits(total_digits, choices, ans_idx):
+    matching_pages = [p for p in range(1, 500) if total_digits_for_pages(p) == total_digits]
+    assert len(matching_pages) == 1, f"Invalid total_digits={total_digits}: matching_pages={matching_pages}"
+    ans_pages = matching_pages[0]
+    matches = [i for i, ch in enumerate(choices) if int(ch) == ans_pages]
+    assert matches == [ans_idx], f"Book pages={ans_pages}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2003_16(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Counting Digits in Book Page Numbers", "Based on 2003, Problem 16")
+
+    opts0 = ["12", "15", "22", "28", "35"]
+    check_pages_from_digits(35, opts0, 2)
+    if include_orig:
+        d.problem(
+            "Original 2003 #16.",
+            "The number of digits used to write all the page numbers in a book is 35. "
+            "How many pages is the book in total?",
+            choices=opts0,
+        )
+        key.append((
+            "2003 #16",
+            "C",
+            "Pages 1 through 9 use 9 single digits, leaving 35 - 9 = 26 digits for the two-digit pages. "
+            "Since each two-digit page uses 2 digits, there are 26 ÷ 2 = 13 two-digit pages. "
+            "In total, the book has 9 + 13 = 22 pages.",
+        ))
+
+    practices = [
+        # Practice .1: 49 digits -> 9 + 2*(N-9) = 49 -> 2*(N-9)=40 -> N-9=20 -> N = 29 pages (Answer: D)
+        (
+            49,
+            ["20", "24", "25", "29", "40"],
+            3,
+            "It takes exactly <b>49 digits</b> to print all the page numbers of a storybook (starting from page 1). "
+            "How many pages are in the storybook?",
+            "Pages 1 to 9 take 9 digits, leaving 49 - 9 = 40 digits. Each two-digit page takes 2 digits, "
+            "which gives 40 ÷ 2 = 20 two-digit pages. Adding the 9 single-digit pages gives 9 + 20 = 29 pages.",
+        ),
+        # Practice .2: 63 digits -> 9 + 2*(N-9) = 63 -> 2*(N-9)=54 -> N-9=27 -> N = 36 pages (Answer: B)
+        (
+            63,
+            ["31", "36", "38", "42", "54"],
+            1,
+            "All the pages of a puzzle booklet are numbered starting from 1. A total of <b>63 digits</b> are used "
+            "for the page numbers. How many pages does the booklet have?",
+            "Subtracting the 9 digits used for pages 1–9 leaves 63 - 9 = 54 digits. "
+            "Those 54 digits form 54 ÷ 2 = 27 two-digit page numbers (pages 10 to 36). "
+            "So the booklet has 9 + 27 = 36 pages.",
+        ),
+        # Practice .3: 27 digits -> 9 + 2*(N-9) = 27 -> 2*(N-9)=18 -> N-9=9 -> N = 18 pages (Answer: A)
+        (
+            27,
+            ["18", "19", "21", "23", "27"],
+            0,
+            "Leo numbered all the pages of his comic notebook starting from page 1 and wrote <b>27 digits</b> in total. "
+            "How many pages did he number?",
+            "Pages 1 to 9 use 9 digits, leaving 27 - 9 = 18 digits for two-digit pages. "
+            "That gives 18 ÷ 2 = 9 two-digit pages, so there are 9 + 9 = 18 pages in total.",
+        ),
+        # Practice .4: 85 digits -> 9 + 2*(N-9) = 85 -> 2*(N-9)=76 -> N-9=38 -> N = 47 pages (Answer: E)
+        (
+            85,
+            ["38", "42", "44", "45", "47"],
+            4,
+            "A magazine uses <b>85 digits</b> to number all of its pages from page 1 to the last page. "
+            "How many pages are in the magazine?",
+            "Pages 1 to 9 use 9 digits, leaving 85 - 9 = 76 digits. Dividing by 2 digits per page gives "
+            "76 ÷ 2 = 38 two-digit pages. In total, there are 9 + 38 = 47 pages.",
+        ),
+    ]
+
+    for idx, (tot_d, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_pages_from_digits(tot_d, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2003 #17 Barcode of Wide & Narrow Black and White Bars
+def fig_barcode():
+    w, h = 88, 36
+
+    def draw(c, x, y):
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+        # Left group: wide, narrow, wide
+        c.rect(x + 4, y + 4, 6, 28, stroke=0, fill=1)
+        c.rect(x + 15, y + 4, 2.2, 28, stroke=0, fill=1)
+        c.rect(x + 22, y + 4, 6, 28, stroke=0, fill=1)
+        # Dots in middle
+        c.setFont("Helvetica-Bold", 11)
+        c.drawCentredString(x + 41, y + 16, ". . . . .")
+        # Right group: narrow, wide, wide
+        c.rect(x + 56, y + 4, 2.2, 28, stroke=0, fill=1)
+        c.rect(x + 63, y + 4, 6, 28, stroke=0, fill=1)
+        c.rect(x + 74, y + 4, 6, 28, stroke=0, fill=1)
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_barcode(total_bars, white_minus_wide, choices, ans_idx):
+    assert total_bars % 2 == 1, "Total bars must be odd when starting and ending with black"
+    n_black = (total_bars + 1) // 2
+    n_white = (total_bars - 1) // 2
+    n_wide = n_white - white_minus_wide
+    n_narrow = n_black - n_wide
+    assert n_wide > 0 and n_narrow > 0
+    matches = [i for i, ch in enumerate(choices) if int(ch) == n_narrow]
+    assert matches == [ans_idx], f"Barcode narrow={n_narrow}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2003_17(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Alternating Black & White Barcode", "Based on 2003, Problem 17")
+
+    opts0 = ["1", "2", "3", "4", "5"]
+    check_barcode(17, 3, opts0, 3)
+    if include_orig:
+        d.problem(
+            "Original 2003 #17.",
+            "A bar code is formed using 17 black and white bars (the first and last bars are black). "
+            "The black bars are two types: wide and narrow. The number of white bars is 3 more than the number "
+            "of wide black bars. The number of narrow black bars is:",
+            fig_barcode(),
+            "right",
+            opts0,
+        )
+        key.append((
+            "2003 #17",
+            "D",
+            "Since the 17 bars alternate black and white and both the first and last bars are black, there are "
+            "9 black bars and 8 white bars. The number of white bars (8) is 3 more than the wide black bars, "
+            "so there are 8 - 3 = 5 wide black bars. That leaves 9 - 5 = 4 narrow black bars.",
+        ))
+
+    practices = [
+        # Practice .1: 21 total bars -> 11 black, 10 white. White is 4 more than wide black -> wide = 6, narrow = 11 - 6 = 5 (Answer: E)
+        (
+            21, 4,
+            ["1", "2", "3", "4", "5"],
+            4,
+            "A bar code is made of 21 alternating black and white bars, starting and ending with a black bar. "
+            "Each black bar is either wide or narrow. The number of white bars is 4 more than the number of wide "
+            "black bars. How many narrow black bars are there?",
+            "Out of 21 alternating bars starting and ending with black, there are 11 black bars and 10 white bars. "
+            "Since 10 white bars is 4 more than the wide black bars, there are 10 - 4 = 6 wide black bars, "
+            "leaving 11 - 6 = 5 narrow black bars.",
+        ),
+        # Practice .2: 19 total bars -> 10 black, 9 white. White is 2 more than wide black -> wide = 7, narrow = 10 - 7 = 3 (Answer: C)
+        (
+            19, 2,
+            ["1", "2", "3", "4", "5"],
+            2,
+            "A label has a bar code of 19 alternating black and white bars (both the first and last bars are black). "
+            "The number of white bars is 2 more than the number of wide black bars. "
+            "How many narrow black bars are in the bar code?",
+            "With 19 alternating bars beginning and ending with black, there are 10 black bars and 9 white bars. "
+            "There are 9 - 2 = 7 wide black bars, so there are 10 - 7 = 3 narrow black bars.",
+        ),
+        # Practice .3: 15 total bars -> 8 black, 7 white. White is 1 more than wide black -> wide = 6, narrow = 8 - 6 = 2 (Answer: B)
+        (
+            15, 1,
+            ["1", "2", "3", "4", "5"],
+            1,
+            "A ticket bar code has 15 alternating black and white bars, where the first and last bars are black. "
+            "The number of white bars is 1 more than the number of wide black bars. "
+            "How many narrow black bars are there?",
+            "Among 15 alternating bars starting and ending with black, 8 are black and 7 are white. "
+            "The number of wide black bars is 7 - 1 = 6, leaving 8 - 6 = 2 narrow black bars.",
+        ),
+        # Practice .4: 25 total bars -> 13 black, 12 white. White is 5 more than wide black -> wide = 7, narrow = 13 - 7 = 6 (Answer: D)
+        (
+            25, 5,
+            ["3", "4", "5", "6", "7"],
+            3,
+            "A package bar code uses 25 alternating black and white bars (the first and last bars are black). "
+            "The number of white bars is 5 more than the number of wide black bars. "
+            "How many narrow black bars does the bar code have?",
+            "Out of 25 alternating bars starting and ending with black, there are 13 black bars and 12 white bars. "
+            "There are 12 - 5 = 7 wide black bars, which leaves 13 - 7 = 6 narrow black bars.",
+        ),
+    ]
+
+    for idx, (t_bars, diff_w, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_barcode(t_bars, diff_w, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            fig_barcode(),
+            "right",
+            opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2007 #3 Common Letters in Words
+def check_common_letters(w1, w2, choices, ans_idx):
+    common = set(w1.upper()) & set(w2.upper())
+    cnt = len(common)
+    matches = [i for i, ch in enumerate(choices) if int(ch) == cnt]
+    assert matches == [ans_idx], f"Common letters between {w1} and {w2}: {common} ({cnt}), choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2007_3(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Common Letters in Two Words", "Based on 2007, Problem 3")
+
+    opts0 = ["1", "2", "3", "4", "5"]
+    check_common_letters("KANGAROO", "PROBLEM", opts0, 1)
+    if include_orig:
+        d.problem(
+            "Original 2007 #3.",
+            "How many common letters do the words <b>KANGAROO</b> and <b>PROBLEM</b> have?",
+            choices=opts0,
+        )
+        key.append((
+            "2007 #3",
+            "B",
+            "The distinct letters in KANGAROO are {K, A, N, G, R, O}, and in PROBLEM are {P, R, O, B, L, E, M}. "
+            "The letters that appear in both words are R and O, so they have 2 common letters.",
+        ))
+
+    practices = [
+        # Practice .1: TRIANGLE and RECTANGLE -> {T, R, I, A, N, G, L, E} & {R, E, C, T, A, N, G, L} = {T, R, A, N, G, L, E} = 7 (Answer: D)
+        (
+            "TRIANGLE", "RECTANGLE",
+            ["4", "5", "6", "7", "8"],
+            3,
+            "How many different letters do the words <b>TRIANGLE</b> and <b>RECTANGLE</b> have in common?",
+            "The distinct letters of TRIANGLE are {T, R, I, A, N, G, L, E} and of RECTANGLE are {R, E, C, T, A, N, G, L}. "
+            "They share the 7 letters T, R, A, N, G, L, and E.",
+        ),
+        # Practice .2: DOLPHIN and PENGUIN -> {D, O, L, P, H, I, N} & {P, E, N, G, U, I} = {P, I, N} = 3 (Answer: C)
+        (
+            "DOLPHIN", "PENGUIN",
+            ["1", "2", "3", "4", "5"],
+            2,
+            "How many common letters do the words <b>DOLPHIN</b> and <b>PENGUIN</b> have?",
+            "Checking each letter of DOLPHIN against PENGUIN: P, I, and N appear in both words. "
+            "So they have 3 common letters.",
+        ),
+        # Practice .3: BALLOON and BANANA -> {B, A, L, O, N} & {B, A, N} = {B, A, N} = 3 (Answer: B)
+        (
+            "BALLOON", "BANANA",
+            ["2", "3", "4", "5", "6"],
+            1,
+            "How many different letters appear in <b>both</b> the word <b>BALLOON</b> and the word <b>BANANA</b>?",
+            "The distinct letters in BANANA are B, A, and N, and all three of them also appear in BALLOON. "
+            "Counting distinct shared letters gives 3 common letters (B, A, and N).",
+        ),
+        # Practice .4: SUMMER and WINTER -> {S, U, M, E, R} & {W, I, N, T, E, R} = {E, R} = 2 (Answer: A)
+        (
+            "SUMMER", "WINTER",
+            ["2", "3", "4", "5", "6"],
+            0,
+            "How many common letters do the words <b>SUMMER</b> and <b>WINTER</b> have?",
+            "The letters in SUMMER are {S, U, M, E, R} and in WINTER are {W, I, N, T, E, R}. "
+            "Only E and R appear in both words, giving 2 common letters.",
+        ),
+    ]
+
+    for idx, (w1, w2, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_common_letters(w1, w2, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2007 #4 Next Number with Same Digit Sum
+def digit_sum(n):
+    return sum(int(ch) for ch in str(n))
+
+
+def next_same_digit_sum(start_n):
+    target = digit_sum(start_n)
+    n = start_n + 1
+    while digit_sum(n) != target:
+        n += 1
+    return n
+
+
+def check_same_digit_sum(start_n, choices, ans_idx):
+    nxt = next_same_digit_sum(start_n)
+    matches = [i for i, ch in enumerate(choices) if int(ch) == nxt]
+    assert matches == [ans_idx], f"Next same digit sum after {start_n} is {nxt}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2007_4(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Next Number with the Same Sum of Digits", "Based on 2007, Problem 4")
+
+    opts0 = ["2016", "2115", "2008", "7002", "2070"]
+    check_same_digit_sum(2007, opts0, 0)
+    if include_orig:
+        d.problem(
+            "Original 2007 #4.",
+            "The numbers 34 and 142 have the same sum of their digits (3+4=7 and 1+4+2=7). "
+            "What is the first number greater than 2007 such that the sum of its digits is the same as the sum "
+            "of the digits of 2007?",
+            choices=opts0,
+        )
+        key.append((
+            "2007 #4",
+            "A",
+            "The sum of the digits of 2007 is 2 + 0 + 0 + 7 = 9. To find the smallest number greater than 2007 "
+            "with digit sum 9, increase the tens digit from 0 to 1 and decrease the ones digit from 7 to 6, giving 2016 "
+            "(2 + 0 + 1 + 6 = 9).",
+        ))
+
+    practices = [
+        # Practice .1: Start = 2026 (sum = 10) -> next is 2035 (2+0+3+5 = 10) (Answer: C)
+        (
+            2026,
+            ["2027", "2034", "2035", "2116", "2062"],
+            2,
+            "What is the smallest number greater than <b>2026</b> such that the sum of its digits is the same as "
+            "the sum of the digits of 2026?",
+            "The sum of the digits of 2026 is 2 + 0 + 2 + 6 = 10. Increasing the tens digit from 2 to 3 and "
+            "decreasing the ones digit from 6 to 5 gives 2035, which is the first number after 2026 with digit sum 10.",
+        ),
+        # Practice .2: Start = 1408 (sum = 13) -> next is 1417 (1+4+1+7 = 13) (Answer: B)
+        (
+            1408,
+            ["1409", "1417", "1426", "1507", "1480"],
+            1,
+            "What is the first number greater than <b>1408</b> whose digits add up to the same sum as the digits of 1408?",
+            "The digits of 1408 add up to 1 + 4 + 0 + 8 = 13. The first number after 1408 with digit sum 13 is "
+            "1417 (1 + 4 + 1 + 7 = 13).",
+        ),
+        # Practice .3: Start = 3059 (sum = 17) -> 3068 (3+0+6+8 = 17) (Answer: D)
+        (
+            3059,
+            ["3060", "3067", "3069", "3068", "3158"],
+            3,
+            "What is the smallest number greater than <b>3059</b> that has the same sum of digits as 3059?",
+            "The digit sum of 3059 is 3 + 0 + 5 + 9 = 17. Increasing the tens digit by 1 (from 5 to 6) and decreasing "
+            "the ones digit by 1 (from 9 to 8) gives 3068, whose digits also sum to 3 + 0 + 6 + 8 = 17.",
+        ),
+        # Practice .4: Start = 4090 (sum = 13) -> 4091..4099 have sums 14..22; 4100..4108: 4108 has sum 4+1+0+8 = 13! (Answer: E)
+        (
+            4090,
+            ["4099", "4100", "4190", "4180", "4108"],
+            4,
+            "What is the first number greater than <b>4090</b> such that the sum of its digits equals the sum of the digits of 4090?",
+            "The sum of the digits of 4090 is 4 + 0 + 9 + 0 = 13. Every number from 4091 to 4099 has a digit sum larger "
+            "than 13. Moving to the 4100s, we need the last two digits to sum to 13 - (4 + 1) = 8, which gives 4108.",
+        ),
+    ]
+
+    for idx, (s_num, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_same_digit_sum(s_num, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2007 #12 Calendar Birthday Offset
+def check_birthday_offset(base_date_tuple, rel, years_diff, days_diff, choices_tuples, ans_idx):
+    from datetime import date, timedelta
+    y, m, day = base_date_tuple
+    # Shift by years first, then days
+    # rel == "older": base person is older than target -> target was born LATER (+years, +days)
+    # rel == "younger": base person is younger than target -> target was born EARLIER (-years, -days)
+    if rel == "older":
+        mid = date(y + years_diff, m, day)
+        res = mid + timedelta(days=days_diff)
+    else:
+        mid = date(y - years_diff, m, day)
+        res = mid - timedelta(days=days_diff)
+    res_tuple = (res.year, res.month, res.day)
+    matches = [i for i, ct in enumerate(choices_tuples) if ct == res_tuple]
+    assert matches == [ans_idx], f"Birthday offset got {res_tuple}, choices={choices_tuples}, ans_idx={ans_idx}"
+
+
+def q_2007_12(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Calendar & Birthday Date Reasoning", "Based on 2007, Problem 12")
+
+    # Original 2007 #12: Basil (born Jan 1, 2002) is older than Peter by 1 year and 1 day -> Peter born Jan 2, 2003 (A)
+    c_tuples0 = [(2003, 1, 2), (2001, 1, 2), (2000, 12, 31), (2002, 12, 31), (2003, 12, 31)]
+    opts0 = ["January 2, 2003", "January 2, 2001", "December 31, 2000", "December 31, 2002", "December 31, 2003"]
+    check_birthday_offset((2002, 1, 1), "older", 1, 1, c_tuples0, 0)
+    if include_orig:
+        d.problem(
+            "Original 2007 #12.",
+            "Basil, who is older than Peter by one year and one day, was born on January 1, 2002. "
+            "What is the date of Peter's birthday?",
+            choices=opts0,
+            choice_cols=3,
+        )
+        key.append((
+            "2007 #12",
+            "A",
+            "Since Basil is older than Peter, Peter is younger and was born 1 year and 1 day AFTER Basil. "
+            "One year after January 1, 2002 is January 1, 2003, and one day after that is January 2, 2003.",
+        ))
+
+    practices = [
+        # Practice .1: Clara (born Jan 1, 2015) is YOUNGER than Leo by 1 year and 1 day -> Leo born 1 yr 1 day BEFORE Jan 1, 2015 = Dec 31, 2013 (Answer: C)
+        (
+            (2015, 1, 1), "younger", 1, 1,
+            [(2016, 1, 2), (2014, 1, 2), (2013, 12, 31), (2014, 12, 31), (2016, 12, 31)],
+            ["January 2, 2016", "January 2, 2014", "December 31, 2013", "December 31, 2014", "December 31, 2016"],
+            2,
+            "Clara, who is <b>younger</b> than Leo by one year and one day, was born on January 1, 2015. "
+            "What is the date of Leo's birthday?",
+            "Because Clara is younger than Leo, Leo is older and was born 1 year and 1 day BEFORE Clara. "
+            "One year before January 1, 2015 is January 1, 2014, and one day before that is December 31, 2013.",
+        ),
+        # Practice .2: Max (born Dec 31, 2010) is OLDER than Nina by 1 year and 2 days -> Nina born 1 yr 2 days AFTER Dec 31, 2010 = Jan 2, 2012 (Answer: B)
+        (
+            (2010, 12, 31), "older", 1, 2,
+            [(2011, 1, 2), (2012, 1, 2), (2009, 12, 29), (2011, 12, 29), (2012, 1, 1)],
+            ["January 2, 2011", "January 2, 2012", "December 29, 2009", "December 29, 2011", "January 1, 2012"],
+            1,
+            "Max, who is <b>older</b> than Nina by one year and two days, was born on December 31, 2010. "
+            "What is the date of Nina's birthday?",
+            "Since Max is older than Nina, Nina was born 1 year and 2 days AFTER December 31, 2010. "
+            "One year later is December 31, 2011, and two days after that is January 2, 2012.",
+        ),
+        # Practice .3: Sophia (born May 1, 2014) is YOUNGER than Ethan by 2 years and 1 day -> Ethan born 2 yrs 1 day BEFORE May 1, 2014 = April 30, 2012 (Answer: D)
+        (
+            (2014, 5, 1), "younger", 2, 1,
+            [(2016, 5, 2), (2012, 5, 2), (2012, 4, 31) if False else (2016, 4, 30), (2012, 4, 30), (2013, 4, 30)],
+            ["May 2, 2016", "May 2, 2012", "April 30, 2016", "April 30, 2012", "April 30, 2013"],
+            3,
+            "Sophia, who is <b>younger</b> than Ethan by two years and one day, was born on May 1, 2014. "
+            "What is the date of Ethan's birthday?",
+            "Since Sophia is younger than Ethan, Ethan was born 2 years and 1 day BEFORE May 1, 2014. "
+            "Two years before May 1, 2014 is May 1, 2012, and one day before May 1, 2012 is April 30, 2012.",
+        ),
+        # Practice .4: Lucas (born Jan 1, 2018) is OLDER than Maya by 2 years and 3 days -> Maya born Jan 4, 2020 (Answer: E)
+        (
+            (2018, 1, 1), "older", 2, 3,
+            [(2015, 12, 29), (2016, 1, 4), (2019, 1, 4), (2020, 12, 29), (2020, 1, 4)],
+            ["December 29, 2015", "January 4, 2016", "January 4, 2019", "December 29, 2020", "January 4, 2020"],
+            4,
+            "Lucas, who is <b>older</b> than Maya by two years and three days, was born on January 1, 2018. "
+            "What is the date of Maya's birthday?",
+            "Because Lucas is older, Maya was born 2 years and 3 days AFTER January 1, 2018. "
+            "Two years after January 1, 2018 is January 1, 2020, and 3 days later is January 4, 2020.",
+        ),
+    ]
+
+    for idx, (b_date, rel, yd, dd, c_tups, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_birthday_offset(b_date, rel, yd, dd, c_tups, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+            choice_cols=3,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2007 #17 Painted Cube Cut into Unit Cubes
+def fig_painted_cube(Wx, Wy, Wz, s=14):
+    kx = s * 0.38
+    ky = s * 0.30
+    w = Wx * s + Wz * kx + 8
+    h = Wy * s + Wz * ky + 8
+
+    def draw(c, x, y):
+        ox = x + 4
+        oy = y + 4
+
+        def pt(ix, iy, iz):
+            return ox + ix * s + iz * kx, oy + iy * s + iz * ky
+
+        def poly(pts, fill, stroke=colors.black, lw=1.0):
+            p = c.beginPath()
+            p.moveTo(*pts[0])
+            for q in pts[1:]:
+                p.lineTo(*q)
+            p.close()
+            c.setFillColor(fill)
+            c.setStrokeColor(stroke)
+            c.setLineWidth(lw)
+            c.drawPath(p, stroke=1, fill=1)
+
+        # Front face (grey)
+        poly([pt(0, 0, 0), pt(Wx, 0, 0), pt(Wx, Wy, 0), pt(0, Wy, 0)], fill=colors.Color(0.75, 0.75, 0.75), lw=1.5)
+        # Top face (lighter grey)
+        poly([pt(0, Wy, 0), pt(Wx, Wy, 0), pt(Wx, Wy, Wz), pt(0, Wy, Wz)], fill=colors.Color(0.84, 0.84, 0.84), lw=1.5)
+        # Right face (darker grey)
+        poly([pt(Wx, 0, 0), pt(Wx, 0, Wz), pt(Wx, Wy, Wz), pt(Wx, Wy, 0)], fill=colors.Color(0.62, 0.62, 0.62), lw=1.5)
+
+        # Grid lines
+        c.setLineWidth(0.9)
+        c.setStrokeColor(colors.black)
+        for ix in range(1, Wx):
+            c.line(*pt(ix, 0, 0), *pt(ix, Wy, 0))
+            c.line(*pt(ix, Wy, 0), *pt(ix, Wy, Wz))
+        for iy in range(1, Wy):
+            c.line(*pt(0, iy, 0), *pt(Wx, iy, 0))
+            c.line(*pt(Wx, iy, 0), *pt(Wx, iy, Wz))
+        for iz in range(1, Wz):
+            c.line(*pt(0, Wy, iz), *pt(Wx, Wy, iz))
+            c.line(*pt(Wx, 0, iz), *pt(Wx, Wy, iz))
+
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def count_painted_faces(Wx, Wy, Wz, target_faces):
+    cnt = 0
+    for ix in range(Wx):
+        for iy in range(Wy):
+            for iz in range(Wz):
+                faces = (
+                    (1 if ix == 0 else 0)
+                    + (1 if ix == Wx - 1 else 0)
+                    + (1 if iy == 0 else 0)
+                    + (1 if iy == Wy - 1 else 0)
+                    + (1 if iz == 0 else 0)
+                    + (1 if iz == Wz - 1 else 0)
+                )
+                if faces == target_faces:
+                    cnt += 1
+    return cnt
+
+
+def check_painted_cube(Wx, Wy, Wz, target_faces, choices, ans_idx):
+    cnt = count_painted_faces(Wx, Wy, Wz, target_faces)
+    matches = [i for i, ch in enumerate(choices) if int(ch) == cnt]
+    assert matches == [ans_idx], f"Painted cube ({Wx}x{Wy}x{Wz}, faces={target_faces}) -> {cnt}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2007_17(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Painted Cube Cut into Unit Cubes", "Based on 2007, Problem 17")
+
+    opts0 = ["4", "6", "8", "10", "12"]
+    check_painted_cube(3, 3, 3, 2, opts0, 4)
+    if include_orig:
+        d.problem(
+            "Original 2007 #17.",
+            "A cube with a side length of 3 cm is painted grey and cut into smaller cubes with a side length "
+            "of 1 cm each. How many of the smaller cubes will have <b>exactly 2</b> faces painted?",
+            fig_painted_cube(3, 3, 3, s=14),
+            "right",
+            opts0,
+        )
+        key.append((
+            "2007 #17",
+            "E",
+            "In a 3 × 3 × 3 cube, the unit cubes with 2 painted faces lie in the middle of each of the 12 edges "
+            "(excluding the 8 corners). Since there is 1 such cube on each of the 12 edges, there are 12 cubes "
+            "with exactly 2 faces painted.",
+        ))
+
+    practices = [
+        # Practice .1: 3x3x3 cube, exactly 1 face painted -> 6 face-center cubes (Answer: B)
+        (
+            3, 3, 3, 1,
+            ["4", "6", "8", "9", "12"],
+            1,
+            "A 3 cm × 3 cm × 3 cm wooden cube is painted grey on the outside and cut into 27 small 1 cm cubes. "
+            "How many of the small cubes have <b>exactly 1</b> face painted?",
+            "A cube has 6 faces, and in a 3 × 3 × 3 cube only the single center cube on each face has 1 painted face. "
+            "That gives 6 × 1 = 6 small cubes.",
+        ),
+        # Practice .2: 4x4x4 cube, exactly 2 faces painted -> 12 * (4 - 2) = 24 cubes (Answer: D)
+        (
+            4, 4, 4, 2,
+            ["8", "12", "16", "24", "32"],
+            3,
+            "A cube with side length 4 cm is painted grey on all 6 faces and then cut into 1 cm unit cubes. "
+            "How many of the unit cubes have <b>exactly 2</b> faces painted?",
+            "The cubes with 2 faces painted lie along the 12 edges, excluding the 2 corners on each edge. "
+            "On a 4 cm edge there are 4 - 2 = 2 such cubes, so across all 12 edges there are 12 × 2 = 24 cubes.",
+        ),
+        # Practice .3: 4x4x4 cube, exactly 1 face painted -> 6 * (4 - 2)^2 = 24 cubes (Answer: C)
+        (
+            4, 4, 4, 1,
+            ["6", "16", "24", "36", "48"],
+            2,
+            "A 4 cm × 4 cm × 4 cm cube is painted grey on the outside and cut into 64 unit cubes of side 1 cm. "
+            "How many of the unit cubes have <b>exactly 1</b> face painted?",
+            "On each of the 6 faces of the 4 × 4 × 4 cube, the inner 2 × 2 = 4 squares (not touching any edge) "
+            "have 1 painted face. Across all 6 faces, that is 6 × 4 = 24 unit cubes.",
+        ),
+        # Practice .4: 4x3x3 rectangular block, exactly 2 faces painted ->
+        # 4 edges of length 4 have (4-2)=2 each -> 8; 8 edges of length 3 have (3-2)=1 each -> 8; total = 16 (Answer: C)
+        (
+            4, 3, 3, 2,
+            ["12", "14", "16", "18", "20"],
+            2,
+            "A 4 cm × 3 cm × 3 cm rectangular block is painted grey on the outside and cut into 1 cm unit cubes. "
+            "How many of the unit cubes have <b>exactly 2</b> faces painted?",
+            "Cubes with 2 painted faces sit along the 12 edges (between the corners). The 4 edges of length 4 cm "
+            "each have 4 - 2 = 2 such cubes (4 × 2 = 8), and the 8 edges of length 3 cm each have 3 - 2 = 1 such cube "
+            "(8 × 1 = 8). Altogether there are 8 + 8 = 16 cubes.",
+        ),
+    ]
+
+    for idx, (wx, wy, wz, tf, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_painted_cube(wx, wy, wz, tf, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            fig_painted_cube(wx, wy, wz, s=12),
+            "right",
+            opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2007 #21 Growing Grid Pattern of Black & White Cells
+def fig_bw_grid_pattern(grid_specs, s=8.5):
+    """grid_specs: list of (N, is_black_fn, caption_str)."""
+    gap = 14
+    widths = [max(N * s, 54) for N, _, _ in grid_specs]
+    w = sum(widths) + gap * (len(grid_specs) - 1)
+    h = max(N * s for N, _, _ in grid_specs) + 16
+
+    def draw(c, x, y):
+        cx = x
+        for (N, is_black_fn, cap), box_w in zip(grid_specs, widths):
+            gw = N * s
+            gx = cx + (box_w - gw) / 2
+            gy = y + 14
+            for r in range(N):
+                for col in range(N):
+                    if is_black_fn(r, col, N):
+                        c.setFillColor(colors.Color(0.35, 0.35, 0.35))
+                    else:
+                        c.setFillColor(colors.white)
+                    c.setStrokeColor(colors.black)
+                    c.setLineWidth(0.75)
+                    c.rect(gx + col * s, gy + (N - 1 - r) * s, s, s, stroke=1, fill=1)
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica-Bold", 7.5)
+            c.drawCentredString(cx + box_w / 2, gy - 10, cap)
+            cx += box_w + gap
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_bw_pattern(step_fn, step_idx, choices, ans_idx):
+    val = step_fn(step_idx)
+    matches = [i for i, ch in enumerate(choices) if int(ch) == val]
+    assert matches == [ans_idx], f"BW pattern step {step_idx} -> {val}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2007_21(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Growing Pattern of Black and White Grid Cells", "Based on 2007, Problem 21")
+
+    # Original 2007 #21: step k (k=1,2,3...) has grid size (2k+1)x(2k+1) and k^2 black cells (at odd 0-indexed r,c)
+    orig_black_fn = lambda r, c, N: (r % 2 == 1 and c % 2 == 1)
+    orig_white_step = lambda k: (2 * k + 1) ** 2 - k ** 2
+    assert [orig_white_step(1), orig_white_step(2), orig_white_step(3)] == [8, 21, 40]
+    opts0 = ["50", "60", "65", "70", "75"]
+    check_bw_pattern(orig_white_step, 4, opts0, 2)
+
+    orig_specs = [
+        (3, orig_black_fn, "8 white cells"),
+        (5, orig_black_fn, "21 white cells"),
+        (7, orig_black_fn, "40 white cells"),
+    ]
+    if include_orig:
+        d.problem(
+            "Original 2007 #21.",
+            "The following three diagrams represent a pattern in the arrangement of the black and white cells. "
+            "If the pattern continues, how many white cells will the next diagram have?",
+            fig_bw_grid_pattern(orig_specs),
+            "right",
+            opts0,
+        )
+        key.append((
+            "2007 #21",
+            "C",
+            "The grids are 3×3 (with 1×1 = 1 black cell), 5×5 (with 2×2 = 4 black cells), and 7×7 (with 3×3 = 9 black cells). "
+            "The 4th diagram is a 9×9 grid (81 cells) with 4×4 = 16 black cells, leaving 81 - 16 = 65 white cells.",
+        ))
+
+    practices = [
+        # Practice .1: Same diagram, ask for the 5th diagram (11x11 = 121 total - 5^2=25 black = 96 white cells) (Answer: D)
+        (
+            orig_specs,
+            orig_white_step,
+            5,
+            ["75", "84", "90", "96", "105"],
+            3,
+            "The three diagrams show the first 3 steps of a pattern of black and white cells (with 8, 21, and 40 white cells). "
+            "If the pattern continues, how many white cells will the <b>5th diagram</b> have?",
+            "In step k, the grid is (2k + 1) × (2k + 1) and has k × k black cells. For the 5th diagram (k = 5), "
+            "the grid is 11 × 11 = 121 cells with 5 × 5 = 25 black cells, leaving 121 - 25 = 96 white cells.",
+        ),
+        # Practice .2: Diagonal black cells on k+2 grid (k=1: 3x3 with 3 black on diagonal -> 6 white; k=2: 4x4 with 4 black -> 12 white; k=3: 5x5 with 5 black -> 20 white; next k=4: 6x6 - 6 = 30 white) (Answer: B)
+        (
+            [
+                (3, lambda r, c, N: r == c, "6 white cells"),
+                (4, lambda r, c, N: r == c, "12 white cells"),
+                (5, lambda r, c, N: r == c, "20 white cells"),
+            ],
+            lambda k: (k + 2) ** 2 - (k + 2),
+            4,
+            ["24", "30", "32", "36", "42"],
+            1,
+            "The three diagrams show a pattern where the main diagonal is shaded grey (with 6, 12, and 20 white cells). "
+            "How many white cells will the <b>next</b> diagram in the pattern have?",
+            "The grids are 3×3 (9 - 3 = 6 white), 4×4 (16 - 4 = 12 white), and 5×5 (25 - 5 = 20 white). "
+            "The next grid is 6×6 = 36 cells with 6 diagonal grey cells, giving 36 - 6 = 30 white cells.",
+        ),
+        # Practice .3: Border white, inner (k)x(k) black! Wait: let's do checkerboard corners or plus-cross!
+        # Let's do: step k has (2k+1)x(2k+1) grid where the center row and center column are grey (a cross of 4k+1 grey cells),
+        # leaving 4 * k^2 white cells!
+        # k=1 (3x3): 4 white cells; k=2 (5x5): 16 white cells; k=3 (7x7): 36 white cells; k=4 (9x9): 64 white cells (Answer: E)
+        (
+            [
+                (3, lambda r, c, N: r == N // 2 or c == N // 2, "4 white cells"),
+                (5, lambda r, c, N: r == N // 2 or c == N // 2, "16 white cells"),
+                (7, lambda r, c, N: r == N // 2 or c == N // 2, "36 white cells"),
+            ],
+            lambda k: 4 * (k ** 2),
+            4,
+            ["48", "52", "56", "60", "64"],
+            4,
+            "In the pattern shown, the middle row and middle column of each odd-sized square grid are shaded grey "
+            "(leaving 4, 16, and 36 white cells in the first three diagrams). How many white cells will the <b>next</b> diagram have?",
+            "In each diagram, the grey cross splits the white cells into 4 identical k × k corners: "
+            "4 × 1² = 4, 4 × 2² = 16, and 4 × 3² = 36. In the 4th diagram (a 9 × 9 grid), there are 4 × 4² = 64 white cells.",
+        ),
+        # Practice .4: Original pattern, how many MORE white cells does the 4th diagram have than the 3rd diagram? 65 - 40 = 25 (Answer: A)
+        (
+            orig_specs,
+            lambda k: orig_white_step(k) - orig_white_step(k - 1),
+            4,
+            ["25", "23", "21", "19", "16"],
+            0,
+            "Look at the three diagrams of black and white cells (with 8, 21, and 40 white cells). "
+            "How many <b>more</b> white cells will the 4th diagram have than the 3rd diagram?",
+            "The number of white cells increases by 21 - 8 = 13 from the 1st to the 2nd diagram, and by 40 - 21 = 19 "
+            "from the 2nd to the 3rd diagram (6 more each step). The next increase is 19 + 6 = 25 more white cells "
+            "(since the 4th diagram has 65 white cells and 65 - 40 = 25).",
+        ),
+    ]
+
+    for idx, (specs, s_fn, s_idx, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_bw_pattern(s_fn, s_idx, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            fig_bw_grid_pattern(specs),
+            "right",
+            opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2007 #23 Total Digits from 1 to N
+def check_digits_range(start_n, end_n, choices, ans_idx):
+    tot = sum(len(str(x)) for x in range(start_n, end_n + 1))
+    matches = [i for i, ch in enumerate(choices) if int(ch) == tot]
+    assert matches == [ans_idx], f"Digits from {start_n} to {end_n} -> {tot}, choices={choices}, ans_idx={ans_idx}"
+
+
+def q_2007_23(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Total Digits Written from 1 to N", "Based on 2007, Problem 23")
+
+    opts0 = ["100", "150", "190", "192", "200"]
+    check_digits_range(1, 100, opts0, 3)
+    if include_orig:
+        d.problem(
+            "Original 2007 #23.",
+            "How many digits are needed to write down all numbers from 1 to 100?",
+            choices=opts0,
+        )
+        key.append((
+            "2007 #23",
+            "D",
+            "Numbers 1 to 9 have 1 digit each (9 × 1 = 9 digits). Numbers 10 to 99 have 2 digits each "
+            "(90 × 2 = 180 digits). The number 100 has 3 digits. In total, 9 + 180 + 3 = 192 digits are needed.",
+        ))
+
+    practices = [
+        # Practice .1: 1 to 50 -> 9*1 + 41*2 = 9 + 82 = 91 digits (Answer: B)
+        (
+            1, 50,
+            ["50", "91", "99", "100", "101"],
+            1,
+            "How many digits are needed to write down all whole numbers from <b>1 to 50</b>?",
+            "The 9 one-digit numbers (1 to 9) use 9 × 1 = 9 digits. The 41 two-digit numbers (10 to 50) use "
+            "41 × 2 = 82 digits. Altogether, 9 + 82 = 91 digits are needed.",
+        ),
+        # Practice .2: 1 to 120 -> 9*1 + 90*2 + 21*3 = 9 + 180 + 63 = 252 digits (Answer: C)
+        (
+            1, 120,
+            ["240", "249", "252", "260", "360"],
+            2,
+            "How many digits are needed to write down all whole numbers from <b>1 to 120</b>?",
+            "Numbers 1–9 use 9 × 1 = 9 digits; numbers 10–99 use 90 × 2 = 180 digits; and the 21 three-digit numbers "
+            "from 100 to 120 use 21 × 3 = 63 digits. In total, 9 + 180 + 63 = 252 digits are needed.",
+        ),
+        # Practice .3: 1 to 80 -> 9*1 + 71*2 = 9 + 142 = 151 digits (Answer: A)
+        (
+            1, 80,
+            ["151", "153", "160", "161", "169"],
+            0,
+            "A locker hallway has 80 lockers numbered from <b>1 to 80</b>. If each digit is a plastic sticker, "
+            "how many digit stickers are needed in total?",
+            "Lockers 1–9 need 9 × 1 = 9 stickers, and lockers 10–80 (71 lockers) need 71 × 2 = 142 stickers. "
+            "That is 9 + 142 = 151 digit stickers in total.",
+        ),
+        # Practice .4: 10 to 100 -> 90*2 + 1*3 = 183 digits (Answer: E)
+        (
+            10, 100,
+            ["180", "181", "182", "192", "183"],
+            4,
+            "How many digits are needed to write down all whole numbers from <b>10 to 100</b> (inclusive)?",
+            "There are 90 two-digit numbers from 10 to 99, using 90 × 2 = 180 digits, plus the three-digit number 100, "
+            "which uses 3 digits. That gives 180 + 3 = 183 digits.",
+        ),
+    ]
+
+    for idx, (s_n, e_n, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_digits_range(s_n, e_n, opts, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            choices=opts,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
+# ------------------------------------------------- Set: 2007 #24 Twice-Folded Square Paper Cut
+def fig_folding_sequence():
+    """Draw the 4-step folding and corner-cutting diagram from 2007 #24."""
+    w, h = 155, 48
+
+    def draw(c, x, y):
+        c.setStrokeColor(colors.black)
+        c.setFillColor(colors.white)
+        c.setLineWidth(1.0)
+        # Step 1: full square 32x32 with vertical dashed midline
+        s = 30
+        x1 = x + 4
+        y1 = y + 4
+        c.rect(x1, y1, s, s, stroke=1, fill=0)
+        c.setDash(3, 2)
+        c.line(x1 + s / 2, y1, x1 + s / 2, y1 + s)
+        c.setDash([])
+        # Curved arrow 1
+        p = c.beginPath()
+        p.moveTo(x1 + 6, y1 + s + 3)
+        p.curveTo(x1 + 12, y1 + s + 10, x1 + 20, y1 + s + 10, x1 + 25, y1 + s + 3)
+        c.drawPath(p, stroke=1, fill=0)
+        c.line(x1 + 25, y1 + s + 3, x1 + 22, y1 + s + 6)
+        c.line(x1 + 25, y1 + s + 3, x1 + 22, y1 + s + 2)
+
+        # Step 2: half rectangle 15x30 with horizontal dashed midline
+        x2 = x1 + s + 14
+        c.rect(x2, y1, s / 2, s, stroke=1, fill=0)
+        c.setDash(3, 2)
+        c.line(x2, y1 + s / 2, x2 + s / 2, y1 + s / 2)
+        c.setDash([])
+        # Curved arrow 2 (top to bottom)
+        p2 = c.beginPath()
+        p2.moveTo(x2 + s / 2 + 2, y1 + s - 4)
+        p2.curveTo(x2 + s / 2 + 10, y1 + s - 6, x2 + s / 2 + 10, y1 + s / 2 + 2, x2 + s / 2 + 2, y1 + s / 2 - 2)
+        c.drawPath(p2, stroke=1, fill=0)
+
+        # Step 3: small square 15x15
+        x3 = x2 + s / 2 + 16
+        c.rect(x3, y1, s / 2, s / 2, stroke=1, fill=0)
+        # Arrow 3
+        c.line(x3 + s / 2 + 3, y1 + s / 4, x3 + s / 2 + 11, y1 + s / 4)
+        c.line(x3 + s / 2 + 11, y1 + s / 4, x3 + s / 2 + 8, y1 + s / 4 + 2.5)
+        c.line(x3 + s / 2 + 11, y1 + s / 4, x3 + s / 2 + 8, y1 + s / 4 - 2.5)
+
+        # Step 4: small square 15x15 with top-left corner cut
+        x4 = x3 + s / 2 + 14
+        hs = s / 2
+        cut = 5
+        p3 = c.beginPath()
+        p3.moveTo(x4, y1)
+        p3.lineTo(x4 + hs, y1)
+        p3.lineTo(x4 + hs, y1 + hs)
+        p3.lineTo(x4 + cut, y1 + hs)
+        p3.lineTo(x4, y1 + hs - cut)
+        p3.close()
+        c.drawPath(p3, stroke=1, fill=0)
+        c.setDash(2, 2)
+        c.line(x4, y1 + hs - cut, x4 + cut, y1 + hs)
+        c.setDash([])
+
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def fig_unfolded_paper(design_kind, s=36):
+    """Draw an unfolded square paper design resulting from cutting corners/edges."""
+    w = h = s + 6
+
+    def draw(c, x, y):
+        ox = x + 3
+        oy = y + 3
+        d = s * 0.22
+        mid = s / 2.0
+
+        c.setStrokeColor(colors.black)
+        c.setFillColor(colors.white)
+        c.setLineWidth(1.1)
+
+        def stroke_poly(pts):
+            p = c.beginPath()
+            p.moveTo(ox + pts[0][0], oy + pts[0][1])
+            for px, py in pts[1:]:
+                p.lineTo(ox + px, oy + py)
+            p.close()
+            c.drawPath(p, stroke=1, fill=0)
+
+        if design_kind == "four_corners":
+            # A: Octagon (all 4 outer corners cut off)
+            stroke_poly([
+                (d, 0), (s - d, 0),
+                (s, d), (s, s - d),
+                (s - d, s), (d, s),
+                (0, s - d), (0, d),
+            ])
+        elif design_kind == "top_bot_notches":
+            # B: V-notches in middle of top and bottom edges
+            stroke_poly([
+                (0, 0), (mid - d * 0.7, 0), (mid, d), (mid + d * 0.7, 0), (s, 0),
+                (s, s), (mid + d * 0.7, s), (mid, s - d), (mid - d * 0.7, s), (0, s),
+            ])
+        elif design_kind == "left_right_notches":
+            # C: V-notches in middle of left and right edges
+            stroke_poly([
+                (0, 0), (s, 0),
+                (s, mid - d * 0.7), (s - d, mid), (s, mid + d * 0.7),
+                (s, s), (0, s),
+                (0, mid + d * 0.7), (d, mid), (0, mid - d * 0.7),
+            ])
+        elif design_kind == "center_diamond":
+            # D: Solid outer square with diamond hole in the center
+            c.rect(ox, oy, s, s, stroke=1, fill=0)
+            stroke_poly([
+                (mid, mid - d), (mid + d, mid), (mid, mid + d), (mid - d, mid),
+            ])
+        elif design_kind == "all_four_edge_notches":
+            # IMPOSSIBLE with 1 corner cut: notches on all 4 edges at once!
+            stroke_poly([
+                (0, 0), (mid - d * 0.65, 0), (mid, d * 0.85), (mid + d * 0.65, 0), (s, 0),
+                (s, mid - d * 0.65), (s - d * 0.85, mid), (s, mid + d * 0.65),
+                (s, s), (mid + d * 0.65, s), (mid, s - d * 0.85), (mid - d * 0.65, s), (0, s),
+                (0, mid + d * 0.65), (d * 0.85, mid), (0, mid - d * 0.65),
+            ])
+        elif design_kind == "single_top_notch":
+            # IMPOSSIBLE with 2 folds: notch on ONLY the top edge!
+            stroke_poly([
+                (0, 0), (s, 0), (s, s),
+                (mid + d * 0.7, s), (mid, s - d), (mid - d * 0.7, s), (0, s),
+            ])
+        elif design_kind == "two_opposite_corners":
+            # IMPOSSIBLE: only 2 opposite outer corners cut off!
+            stroke_poly([
+                (d, 0), (s, 0), (s, s - d), (s - d, s), (0, s), (0, d),
+            ])
+        else:
+            c.rect(ox, oy, s, s, stroke=1, fill=0)
+
+        c.setFillColor(colors.black)
+        c.setStrokeColor(colors.black)
+
+    return w, h, draw
+
+
+def check_paper_fold_designs(designs, target_set, expected_idx):
+    matches = [i for i, d_kind in enumerate(designs) if d_kind in target_set]
+    assert matches == [expected_idx], f"Paper fold check failed: matches={matches} vs {expected_idx}"
+
+
+def q_2007_24(d, key, set_num=1, include_orig=True, num_practice=3):
+    d.heading(f"Set {set_num} - Folding a Square Paper Twice & Cutting a Corner", "Based on 2007, Problem 24")
+
+    valid_4_corners = {"four_corners", "top_bot_notches", "left_right_notches", "center_diamond"}
+    orig_A_to_D = ["four_corners", "top_bot_notches", "left_right_notches", "center_diamond"]
+    assert all(k in valid_4_corners for k in orig_A_to_D)
+
+    if include_orig:
+        row_AD = option_row([fig_unfolded_paper(k) for k in orig_A_to_D], gap=18)
+        d.problem(
+            "Original 2007 #24.",
+            "A square piece of paper is folded twice in such a way that the result is a square again. "
+            "In the new square, one of the corners is cut out and then the paper is unfolded. "
+            "Which of the following designs (A, B, C, D) cannot be obtained this way? "
+            "(Choose <b>E</b> if all four designs can be obtained this way.)",
+            vstack([fig_folding_sequence(), row_AD], gap=8),
+            "below",
+            choices=["Design A", "Design B", "Design C", "Design D", "All of these designs can be obtained this way"],
+            choice_cols=3,
+        )
+        key.append((
+            "2007 #24",
+            "E",
+            "When the square is folded in half vertically and then horizontally, the resulting small square has 4 corners: "
+            "(1) the 4 loose outer corners (cutting it gives A), (2) the folded top/bottom midpoints (cutting it gives B), "
+            "(3) the folded left/right midpoints (cutting it gives C), and (4) the center point where both creases meet "
+            "(cutting it gives D). Since all four designs A–D can be obtained by choosing which corner to cut, the answer is E.",
+        ))
+
+    practices = [
+        # Practice .1: One of the 5 visual options is IMPOSSIBLE ("all_four_edge_notches" at C) -> Answer: C
+        (
+            ["four_corners", "top_bot_notches", "all_four_edge_notches", "left_right_notches", "center_diamond"],
+            {"all_four_edge_notches"},
+            2,
+            "A square piece of paper is folded in half vertically and then in half horizontally to form a smaller square. "
+            "<b>Exactly one</b> of the four corners of this folded square is cut off with a straight snip, and the paper is unfolded. "
+            "Which of the 5 designs below <b>cannot</b> be obtained?",
+            "Cutting a single corner of the twice-folded square can cut the 4 outer corners (A), the top and bottom edge midpoints (B), "
+            "the left and right edge midpoints (D), or the center (E). To get notches on all four edges at once (C), you would have to "
+            "cut two different corners of the folded square, so C cannot be obtained with one corner cut.",
+        ),
+        # Practice .2: Which design is obtained when you cut the corner where BOTH fold creases meet (the completely folded center corner)? -> center_diamond at D
+        (
+            ["four_corners", "top_bot_notches", "left_right_notches", "center_diamond", "all_four_edge_notches"],
+            {"center_diamond"},
+            3,
+            "A square sheet of paper is folded in half twice (once vertically, once horizontally) to make a smaller square. "
+            "You cut off the single corner where <b>both folded creases meet</b>, and then unfold the paper. Which design do you get?",
+            "The corner where the vertical crease and horizontal crease meet is the exact center of the original square! "
+            "Cutting that corner removes a diamond-shaped hole right in the middle of the unfolded square (D).",
+        ),
+        # Practice .3: Which design is obtained when you cut the corner made of the 4 loose outer corners? -> four_corners at A
+        (
+            ["four_corners", "top_bot_notches", "left_right_notches", "center_diamond", "single_top_notch"],
+            {"four_corners"},
+            0,
+            "A square piece of paper is folded in half vertically and then in half horizontally into a smaller square. "
+            "One of its corners consists of <b>4 loose paper corners</b> (with no fold creases). If you cut off that corner "
+            "and unfold the paper, which shape do you get?",
+            "The corner with 4 loose layers contains all 4 outer corners of the original square stacked together. "
+            "Snipping it cuts off all 4 outer corners of the unfolded square, producing the octagon in A.",
+        ),
+        # Practice .4: Which of the 5 designs CANNOT be obtained by cutting one corner of the twice-folded square? ("single_top_notch" at B)
+        (
+            ["center_diamond", "single_top_notch", "four_corners", "top_bot_notches", "left_right_notches"],
+            {"single_top_notch"},
+            1,
+            "A square paper is folded in half twice to form a smaller square, and one corner of the folded square is cut off. "
+            "When unfolded, the cut pattern must be symmetric across both fold lines. Which design below <b>cannot</b> be obtained?",
+            "Because the paper was folded in half both vertically and horizontally, any cut must be symmetric across both the "
+            "vertical and horizontal midlines. Design B has a notch on the top edge only (and not on the bottom edge), which is impossible!",
+        ),
+    ]
+
+    for idx, (d_kinds, target_s, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+        check_paper_fold_designs(d_kinds, target_s, ans_idx)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            option_row([fig_unfolded_paper(k) for k in d_kinds], gap=14),
+            "below",
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+
+
 # Registry of dedicated per-question implementations.
 # Every new (year, number) MUST be implemented as its own q_<year>_<num>(d, key, set_num) method!
 QUESTIONS = {
@@ -2885,17 +4958,146 @@ QUESTIONS = {
     (2002, 10): q_2002_10,
     (2002, 11): q_2002_11,
     (2002, 12): q_2002_12,
+    (2002, 15): q_2002_15,
+    (2002, 18): q_2002_18,
+    (2002, 20): q_2002_20,
+    (2002, 21): q_2002_21,
+    (2002, 22): q_2002_22,
+    (2002, 24): q_2002_24,
     (2003, 9): q_2003_9,
+    (2003, 10): q_2003_10,
     (2003, 12): q_2003_12,
     (2003, 14): q_2003_14,
+    (2003, 16): q_2003_16,
+    (2003, 17): q_2003_17,
     (2003, 18): q_2003_18,
     (2007, 1): q_2007_1,
+    (2007, 3): q_2007_3,
+    (2007, 4): q_2007_4,
     (2007, 8): q_2007_8,
     (2007, 10): q_2007_10,
+    (2007, 12): q_2007_12,
     (2007, 14): q_2007_14,
+    (2007, 17): q_2007_17,
+    (2007, 21): q_2007_21,
+    (2007, 23): q_2007_23,
+    (2007, 24): q_2007_24,
 }
 
 NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six"}
+
+
+class _ProblemCollector:
+    """Duck-typed Doc collector to harvest custom practice variations from any q_<year>_<num> method."""
+
+    def __init__(self):
+        self.problems = []
+
+    def heading(self, text, sub=None):
+        pass
+
+    def problem(self, label, text, fig=None, fig_pos="right", choices=None, choice_cols=5):
+        self.problems.append((label, text, fig, fig_pos, choices, choice_cols))
+
+
+def parse_question_pool(pool_path="question-pool.txt"):
+    pool = []
+    with open(pool_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or ":" not in line:
+                continue
+            yr_str, nums_str = line.split(":", 1)
+            yr = int(yr_str.strip())
+            for part in nums_str.split(","):
+                part = part.strip()
+                if part:
+                    q_id = (yr, int(part))
+                    if q_id not in pool:
+                        pool.append(q_id)
+    return pool
+
+
+def generate_exam(pool_path="question-pool.txt", out_pdf=None, num_questions=20, seed=None):
+    import random
+    import inspect
+
+    if out_pdf is None:
+        out_pdf = get_timestamp_filename()
+
+    pool = parse_question_pool(pool_path)
+    missing = [q for q in pool if q not in QUESTIONS]
+    if missing:
+        raise NotImplementedError(
+            f"Questions {missing} in {pool_path} do not have dedicated methods yet! "
+            "Inspect the source PDF(s) and implement q_<year>_<num> for each one."
+        )
+
+    rng = random.Random(seed)
+    if len(pool) >= num_questions:
+        selected_q_ids = rng.sample(pool, num_questions)
+    else:
+        selected_q_ids = list(pool)
+        while len(selected_q_ids) < num_questions:
+            selected_q_ids.append(rng.choice(pool))
+        rng.shuffle(selected_q_ids)
+
+    d = Doc(out_pdf)
+    c = d.c
+    c.setFont("Helvetica-Bold", 19)
+    c.drawCentredString(PW / 2, PH - 68, "Math Kangaroo Practice Exam - Grades 3-4")
+    c.setFont("Helvetica", 10.5)
+    c.drawCentredString(
+        PW / 2,
+        PH - 86,
+        f"{num_questions} Randomly Selected Practice Questions (Similar to Contest Problems — Never Originals)",
+    )
+    c.setLineWidth(0.9)
+    c.line(ML, PH - 96, PW - MR, PH - 96)
+    d.y = PH - 112
+
+    exam_key = []
+    used_variations = {}
+
+    for q_idx, q_id in enumerate(selected_q_ids, start=1):
+        fn = QUESTIONS[q_id]
+        collector = _ProblemCollector()
+        temp_key = []
+        sig = inspect.signature(fn)
+        if "num_practice" in sig.parameters:
+            fn(collector, temp_key, set_num=q_idx, include_orig=False, num_practice=5)
+        else:
+            fn(collector, temp_key, set_num=q_idx, include_orig=False)
+
+        assert len(collector.problems) == len(temp_key) and len(collector.problems) > 0
+        avail = [i for i in range(len(collector.problems)) if i not in used_variations.get(q_id, set())]
+        if not avail:
+            avail = list(range(len(collector.problems)))
+        chosen_var = rng.choice(avail)
+        used_variations.setdefault(q_id, set()).add(chosen_var)
+
+        _, text, fig, fig_pos, choices, choice_cols = collector.problems[chosen_var]
+        _, ans_letter, expl = temp_key[chosen_var]
+
+        d.problem(
+            f"Question {q_idx}.",
+            text,
+            fig=fig,
+            fig_pos=fig_pos,
+            choices=choices,
+            choice_cols=choice_cols,
+        )
+        exam_key.append((f"Question {q_idx} (inspired by {q_id[0]} #{q_id[1]})", ans_letter, expl))
+
+    append_answer_key(
+        d,
+        exam_key,
+        title="Answer Key - 20-Question Practice Exam",
+        subtitle=f"For {out_pdf} (Randomly sampled from {pool_path})",
+    )
+    d.save()
+    print("wrote", out_pdf)
+    return out_pdf, selected_q_ids
 
 
 def generate_set(selected_questions, out_pdf, subtitle, include_orig=True, out_key_pdf=None, num_practice=3):
@@ -2972,6 +5174,25 @@ if __name__ == "__main__":
         default=3,
         help="Number of practice problems per original question (default: 3).",
     )
+    parser.add_argument(
+        "--random-exam",
+        type=int,
+        nargs="?",
+        const=20,
+        default=None,
+        help="Generate a random N-question exam (default 20) from question-pool.txt using only similar practice problems.",
+    )
+    parser.add_argument(
+        "--pool",
+        default="question-pool.txt",
+        help="Path to the question pool file (default: question-pool.txt).",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Optional random seed for reproducible exam generation.",
+    )
     args = parser.parse_args()
 
     if args.out:
@@ -2982,7 +5203,14 @@ if __name__ == "__main__":
 
     include_orig = not args.no_include_orig
 
-    if args.questions:
+    if args.random_exam is not None:
+        generate_exam(
+            pool_path=args.pool,
+            out_pdf=out_pdf,
+            num_questions=args.random_exam,
+            seed=args.seed,
+        )
+    elif args.questions:
         selected = []
         for q in args.questions:
             parts = q.replace("#", "").split(":")
@@ -2997,5 +5225,6 @@ if __name__ == "__main__":
         )
     else:
         build(out_pdf)
+
 
 

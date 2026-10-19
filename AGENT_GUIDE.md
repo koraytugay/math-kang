@@ -127,7 +127,7 @@ Whenever you implement one or more new questions:
 
 See **`QUESTIONS_INDEX.md`** for the full user-facing index (including quick summary of implemented vs. remaining question numbers per year).
 
-The following 16 questions are currently implemented:
+The following 32 questions are currently implemented:
 
 | Question ID | Function in `generate_practice.py` | Description |
 |---|---|---|
@@ -139,14 +139,30 @@ The following 16 questions are currently implemented:
 | `(2002, 10)` | `q_2002_10(d, key, set_num, include_orig=True, num_practice=5)` | Digit occurrences in sequential house/page/locker numbers |
 | `(2002, 11)` | `q_2002_11(d, key, set_num, include_orig=True, num_practice=5)` | Cracked clock face (1–12) partitioned into pieces with consecutive/target sums |
 | `(2002, 12)` | `q_2002_12(d, key, set_num, include_orig=True, num_practice=5)` | Kangaroo zigzag run on a dashed grid — comparing path lengths |
+| `(2002, 15)` | `q_2002_15(d, key, set_num, include_orig=True, num_practice=3)` | Rectangular flag silhouette in the wind — which silhouette is torn |
+| `(2002, 18)` | `q_2002_18(d, key, set_num, include_orig=True, num_practice=3)` | Pet/item logic deduction — 1-to-1 matching of 4 people and 4 pets/items |
+| `(2002, 20)` | `q_2002_20(d, key, set_num, include_orig=True, num_practice=3)` | 3D cube tunnel rearranged into a stepped pyramid — counting unused cubes |
+| `(2002, 21)` | `q_2002_21(d, key, set_num, include_orig=True, num_practice=3)` | Three digit cards & four basic operations — reaching a target number |
+| `(2002, 22)` | `q_2002_22(d, key, set_num, include_orig=True, num_practice=3)` | Seating permutations around a table/row with fixed seats |
+| `(2002, 24)` | `q_2002_24(d, key, set_num, include_orig=True, num_practice=3)` | Odometer distance until all digits are distinct again |
 | `(2003, 9)` | `q_2003_9(d, key, set_num, include_orig=True)` | 3D W×H×D brick of cubes (red outside, blue inside) |
+| `(2003, 10)` | `q_2003_10(d, key, set_num, include_orig=True, num_practice=3)` | Metric length conversion and addition (`m`, `dm`, `cm`, `mm`) |
 | `(2003, 12)` | `q_2003_12(d, key, set_num, include_orig=True)` | 2D paper net of a house folded into 3D isometric houses A–E |
 | `(2003, 14)` | `q_2003_14(d, key, set_num, include_orig=True)` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
+| `(2003, 16)` | `q_2003_16(d, key, set_num, include_orig=True, num_practice=3)` | Total pages in a book from total digits used for page numbers |
+| `(2003, 17)` | `q_2003_17(d, key, set_num, include_orig=True, num_practice=3)` | Alternating black and white barcode — wide vs. narrow black bars |
 | `(2003, 18)` | `q_2003_18(d, key, set_num, include_orig=True)` | Covering an empty shape on a square grid using two polyomino pieces |
 | `(2007, 1)` | `q_2007_1(d, key, set_num, include_orig=True)` | Forking road diagram — choosing one number/letter per road split |
+| `(2007, 3)` | `q_2007_3(d, key, set_num, include_orig=True, num_practice=3)` | Counting common letters shared by two words |
+| `(2007, 4)` | `q_2007_4(d, key, set_num, include_orig=True, num_practice=3)` | Next number greater than $N$ with the same sum of digits |
 | `(2007, 8)` | `q_2007_8(d, key, set_num, include_orig=True)` | Joining a piece with the given shape to form a solid rectangle |
 | `(2007, 10)` | `q_2007_10(d, key, set_num, include_orig=True)` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
+| `(2007, 12)` | `q_2007_12(d, key, set_num, include_orig=True, num_practice=3)` | Calendar birthday date calculation given older/younger offset |
 | `(2007, 14)` | `q_2007_14(d, key, set_num, include_orig=True)` | 3D cube aquarium (3×3×3) — counting 1 dm cubes inside / missing to fill |
+| `(2007, 17)` | `q_2007_17(d, key, set_num, include_orig=True, num_practice=3)` | Painted 3D cube cut into unit cubes — counting cubes with $k$ painted faces |
+| `(2007, 21)` | `q_2007_21(d, key, set_num, include_orig=True, num_practice=3)` | Growing grid pattern of black and white cells — counting white cells |
+| `(2007, 23)` | `q_2007_23(d, key, set_num, include_orig=True, num_practice=3)` | Total digits needed to write all numbers from $1$ to $N$ |
+| `(2007, 24)` | `q_2007_24(d, key, set_num, include_orig=True, num_practice=3)` | Square paper folded twice and cut at a corner — unfolded paper design |
 
 **Any other `(year, number)` requested by the user is NEW** — you must inspect the source PDF, implement
 a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True, num_practice=...)` function for it, and add it to both `QUESTIONS_INDEX.md` and the table above!
