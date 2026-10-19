@@ -12,9 +12,9 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 |---|---|---|---|
 | **2002** | `1`, `4`, `6`, `7`, `9`, `10`, `11`, `12`, `15`, `18`, `20`, `21`, `22`, `24` | 14 / 24 | `2, 3, 5, 8, 13, 14, 16, 17, 19, 23` |
 | **2003** | `9`, `10`, `12`, `14`, `16`, `17`, `18` | 7 / 24 | `1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 15, 19, 20, 21, 22, 23, 24` |
-| **2007** | `1`, `3`, `4`, `8`, `10`, `12`, `14`, `17`, `21`, `23`, `24` | 11 / 24 | `2, 5, 6, 7, 9, 11, 13, 15, 16, 18, 19, 20, 22` |
+| **2007** | `1`, `3`, `4`, `5`, `8`, `10`, `12`, `14`, `17`, `21`, `23`, `24` | 12 / 24 | `2, 6, 7, 9, 11, 13, 15, 16, 18, 19, 20, 22` |
 
-**Total Implemented Questions:** 32
+**Total Implemented Questions:** 33
 
 ---
 
@@ -62,6 +62,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 | **2007 #1** | `2007:1` | `q_2007_1` | 3 | **Forking Road Diagram** — Finding which combination of symbols/numbers can be collected along a branching path |
 | **2007 #3** | `2007:3` | `q_2007_3` | 4 | **Common Letters in Words** — Counting distinct common letters shared by two words |
 | **2007 #4** | `2007:4` | `q_2007_4` | 4 | **Next Number with Same Digit Sum** — Finding the smallest number greater than $N$ with the same digit sum |
+| **2007 #5** | `2007:5` | `q_2007_5` | 4 | **Number Chain in the Clouds** — Working backwards through a sequence of cloud arithmetic operations |
 | **2007 #8** | `2007:8` | `q_2007_8` | 3 | **Joining Polyominoes to Form a Rectangle** — Finding which piece joins with a given shape to make a solid rectangle |
 | **2007 #10** | `2007:10` | `q_2007_10` | 3 | **3×3 Mini-Sudoku (Latin Square)** — Deductions with `1, 2, 3` appearing once per row and column |
 | **2007 #12** | `2007:12` | `q_2007_12` | 4 | **Calendar Birthday Offset** — Finding a birthday date given an older/younger age difference in years and days |

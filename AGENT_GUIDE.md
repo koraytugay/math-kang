@@ -155,6 +155,7 @@ The following 32 questions are currently implemented:
 | `(2007, 1)` | `q_2007_1(d, key, set_num, include_orig=True)` | Forking road diagram — choosing one number/letter per road split |
 | `(2007, 3)` | `q_2007_3(d, key, set_num, include_orig=True, num_practice=3)` | Counting common letters shared by two words |
 | `(2007, 4)` | `q_2007_4(d, key, set_num, include_orig=True, num_practice=3)` | Next number greater than $N$ with the same sum of digits |
+| `(2007, 5)` | `q_2007_5(d, key, set_num, include_orig=True, num_practice=3)` | Number chain in the clouds — working backwards through arithmetic steps |
 | `(2007, 8)` | `q_2007_8(d, key, set_num, include_orig=True)` | Joining a piece with the given shape to form a solid rectangle |
 | `(2007, 10)` | `q_2007_10(d, key, set_num, include_orig=True)` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
 | `(2007, 12)` | `q_2007_12(d, key, set_num, include_orig=True, num_practice=3)` | Calendar birthday date calculation given older/younger offset |
