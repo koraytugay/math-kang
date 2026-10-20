@@ -158,7 +158,7 @@ The following 33 question generators are currently implemented in `question-gene
 | `(2002, 24)` | `question-generator/2002-24.py` | `argon` (reviewed high effort, dynamic) | `q_2002_24` | Odometer distance until all digits are distinct again |
 | `(2003, 9)` | `question-generator/2003-9.py` | `argon` (reviewed high effort, dynamic) | `q_2003_9` | 3D W×H×D brick of cubes (red outside, blue inside) |
 | `(2003, 10)` | `question-generator/2003-10.py` | `argon` (reviewed high effort, dynamic) | `q_2003_10` | Metric length conversion and addition (`m`, `dm`, `cm`, `mm`) |
-| `(2003, 12)` | `question-generator/2003-12.py` | `argon` | `q_2003_12` | 2D paper net of a house folded into 3D isometric houses A–E |
+| `(2003, 12)` | `question-generator/2003-12.py` | `argon` (reviewed high effort, dynamic) | `q_2003_12` | 2D paper net of a house folded into 3D isometric houses A–E |
 | `(2003, 14)` | `question-generator/2003-14.py` | `argon` | `q_2003_14` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
 | `(2003, 16)` | `question-generator/2003-16.py` | `argon` | `q_2003_16` | Total pages in a book from total digits used for page numbers |
 | `(2003, 17)` | `question-generator/2003-17.py` | `argon` | `q_2003_17` | Alternating black and white barcode — wide vs. narrow black bars |

@@ -47,7 +47,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 |---|---|---|---|---|---|
 | **2003 #9** | `2003:9` | `question-generator/2003-9.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **3D Brick of Cubes** — Counting red (outer) vs. blue (inner) unit cubes in a $W \times H \times D$ cuboid |
 | **2003 #10** | `2003:10` | `question-generator/2003-10.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Metric Length Conversion** — Converting and adding lengths in `m`, `dm`, `cm`, and `mm` |
-| **2003 #12** | `2003:12` | `question-generator/2003-12.py` | `argon` | 3 | **Folding a 3D House Net** — Matching a 2D paper net of a house with windows/doors to 3D views A–E |
+| **2003 #12** | `2003:12` | `question-generator/2003-12.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Folding a 3D House Net** — Matching a 2D paper net of a house with windows/doors to 3D views A–E |
 | **2003 #14** | `2003:14` | `question-generator/2003-14.py` | `argon` | 3 | **Area of Block Letters on a Grid** — Computing area of polygonal letters (`N`, `Z`, `V`, `M`) on a $1\text{ cm}$ grid |
 | **2003 #16** | `2003:16` | `question-generator/2003-16.py` | `argon` | 4 | **Book Page Number Digits** — Finding total pages in a book from the total number of digits used |
 | **2003 #17** | `2003:17` | `question-generator/2003-17.py` | `argon` | 4 | **Alternating Black & White Barcode** — Counting narrow vs. wide black bars in an alternating barcode |
