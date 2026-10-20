@@ -146,7 +146,7 @@ The following 33 question generators are currently implemented in `question-gene
 | `(2002, 4)` | `question-generator/2002-4.py` | `argon` (reviewed high effort, dynamic) | `q_2002_4` | 4×4 / 5×5 square cut along grid lines into polyomino pieces |
 | `(2002, 6)` | `question-generator/2002-6.py` | `argon` (reviewed high effort, dynamic) | `q_2002_6` | Square and rectangle perimeters (perimeter difference) |
 | `(2002, 7)` | `question-generator/2002-7.py` | `argon` (reviewed high effort, dynamic) | `q_2002_7` | Castle skyline contour — which piece cannot belong |
-| `(2002, 9)` | `question-generator/2002-9.py` | `argon` | `q_2002_9` | Tilted/level two-pan balance scale with fruits |
+| `(2002, 9)` | `question-generator/2002-9.py` | `argon` (reviewed high effort, dynamic) | `q_2002_9` | Tilted/level two-pan balance scale with fruits |
 | `(2002, 10)` | `question-generator/2002-10.py` | `argon` | `q_2002_10` | Digit occurrences in sequential house/page/locker numbers |
 | `(2002, 11)` | `question-generator/2002-11.py` | `argon` | `q_2002_11` | Cracked clock face (1–12) partitioned into pieces with consecutive/target sums |
 | `(2002, 12)` | `question-generator/2002-12.py` | `argon` | `q_2002_12` | Kangaroo zigzag run on a dashed grid — comparing path lengths |
