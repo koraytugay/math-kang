@@ -233,6 +233,45 @@ def _flip_h(strokes):
     return out
 
 
+def _flip_v(strokes):
+    """Flip tile strokes vertically: (x, y) -> (x, 1 - y)."""
+    out = []
+    for kind, pts in strokes:
+        out.append((kind, tuple((round(x, 2), round(1.0 - y, 2)) for x, y in pts)))
+    return out
+
+
+def _transform_grid_and_options(nr, nc, grid, miss_rc, opt_strokes, ans_idx, sym, perm, rng):
+    """Apply a dihedral symmetry (id, flip_h, flip_v, rot180) to the entire grid and tile options,
+    and permute the 5 options so each generated problem is genuinely fresh while preserving geometry.
+    """
+    mr, mc = miss_rc
+    if sym == "id":
+        new_miss = (mr, mc)
+        t_fn = lambda s: s
+        r_map = lambda r, c: (r, c)
+    elif sym == "flip_h":
+        new_miss = (mr, nc - 1 - mc)
+        t_fn = _flip_h
+        r_map = lambda r, c: (r, nc - 1 - c)
+    elif sym == "flip_v":
+        new_miss = (nr - 1 - mr, mc)
+        t_fn = _flip_v
+        r_map = lambda r, c: (nr - 1 - r, c)
+    elif sym == "rot180":
+        new_miss = (nr - 1 - mr, nc - 1 - mc)
+        t_fn = _rot180
+        r_map = lambda r, c: (nr - 1 - r, nc - 1 - c)
+    else:
+        raise ValueError(f"Unknown symmetry: {sym}")
+
+    new_grid = {r_map(r, c): t_fn(strokes) for (r, c), strokes in grid.items()}
+    transformed_opts = [t_fn(s) for s in opt_strokes]
+    new_opts = [transformed_opts[i] for i in perm]
+    new_ans_idx = perm.index(ans_idx)
+    return nr, nc, new_grid, new_miss, new_opts, new_ans_idx
+
+
 def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
     d.heading(f"Set {set_num} - Missing puzzle tile", "Based on 2002, Problem 1")
 
@@ -677,6 +716,144 @@ def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
         "bottom-right (0.75) to the lower-right edge (0.25). Only tile C matches all six boundary crossings.",
     ))
 
+    # Practice .7: Lighthouse & Coastal Pier (3x3 grid, missing tile (1, 1) -> Answer: A)
+    # In (1, 1):
+    # - top: [0.35, 0.65]
+    # - bot: [0.25, 0.75]
+    # - left: [0.40]
+    # - right: [0.20, 0.55]
+    grid7 = {
+        (0, 1): [
+            # Lighthouse lantern room & roof at top
+            ("poly", ((0.35, 0.0), (0.35, 0.55), (0.65, 0.55), (0.65, 0.0))),
+            ("poly", ((0.28, 0.55), (0.50, 0.88), (0.72, 0.55), (0.28, 0.55))),
+            ("line", ((0.65, 0.70), (1.0, 0.85))),
+            ("line", ((0.65, 0.62), (1.0, 0.50))),
+        ],
+        (0, 2): [
+            # Light beams shining across sky
+            ("line", ((0.0, 0.85), (0.85, 0.95))),
+            ("line", ((0.0, 0.50), (0.85, 0.35))),
+        ],
+        (1, 0): [
+            # Rocky cliff on left meeting lighthouse at y=0.40
+            ("curve", ((0.15, 0.0), (0.35, 0.35), (0.65, 0.40), (1.0, 0.40))),
+        ],
+        (1, 2): [
+            # Wooden pier extending to the right at y=0.55 and y=0.20
+            ("poly", ((0.0, 0.55), (0.80, 0.55), (0.80, 0.20), (0.0, 0.20))),
+            ("line", ((0.35, 0.20), (0.35, 0.0))),
+            ("line", ((0.65, 0.20), (0.65, 0.0))),
+        ],
+        (2, 0): [
+            # Base of cliff & ocean wave
+            ("curve", ((0.15, 1.0), (0.10, 0.60), (0.10, 0.40), (0.05, 0.25))),
+            ("curve", ((0.05, 0.25), (0.40, 0.35), (0.70, 0.15), (1.0, 0.25))),
+        ],
+        (2, 1): [
+            # Lower lighthouse base & ocean wave
+            ("line", ((0.25, 1.0), (0.20, 0.25))),
+            ("line", ((0.75, 1.0), (0.80, 0.25))),
+            ("curve", ((0.0, 0.25), (0.35, 0.35), (0.65, 0.15), (1.0, 0.25))),
+        ],
+        (2, 2): [
+            # Pier pilings & ocean wave
+            ("line", ((0.35, 1.0), (0.35, 0.25))),
+            ("line", ((0.65, 1.0), (0.65, 0.25))),
+            ("curve", ((0.0, 0.25), (0.35, 0.35), (0.65, 0.15), (0.95, 0.25))),
+        ],
+    }
+    tile7_A = [
+        ("line", ((0.35, 1.0), (0.25, 0.0))),
+        ("line", ((0.65, 1.0), (0.75, 0.0))),
+        ("line", ((0.0, 0.40), (0.29, 0.40))),
+        ("line", ((0.70, 0.55), (1.0, 0.55))),
+        ("line", ((0.73, 0.20), (1.0, 0.20))),
+    ]
+    opt7_strokes = [
+        tile7_A,
+        _flip_h(tile7_A),
+        _rot90_cw(tile7_A),
+        _rot180(tile7_A),
+        _rot90_ccw(tile7_A),
+    ]
+    practices.append((
+        3, 3, grid7, (1, 1), opt7_strokes, 0,
+        "Which of the squares below is missing from the picture of the lighthouse?",
+        "In the center square, the two slanting tower walls connect (0.35, 0.65) on the top edge to (0.25, 0.75) "
+        "on the bottom edge, the cliff meets the left wall at height 0.40, and the two pier lines exit the right "
+        "edge at 0.20 and 0.55. Only tile A matches all of these edges.",
+    ))
+
+    # Practice .8: Castle Drawbridge & Moat (3x4 grid, missing tile (1, 1) -> Answer: D)
+    # In (1, 1):
+    # - top: [0.25, 0.80]
+    # - bot: [0.25, 0.60]
+    # - left: [0.35]
+    # - right: [0.35, 0.75]
+    grid8 = {
+        (0, 1): [
+            # Left turret battlements
+            ("poly", ((0.25, 0.0), (0.25, 0.75), (0.40, 0.75), (0.40, 0.60),
+                      (0.65, 0.60), (0.65, 0.75), (0.80, 0.75), (0.80, 0.0))),
+        ],
+        (0, 2): [
+            # Right turret battlements
+            ("poly", ((0.20, 0.0), (0.20, 0.75), (0.35, 0.75), (0.35, 0.60),
+                      (0.60, 0.60), (0.60, 0.75), (0.75, 0.75), (0.75, 0.0))),
+        ],
+        (1, 0): [
+            # Outer garden wall meeting left turret at y=0.35
+            ("poly", ((0.20, 0.0), (0.20, 0.35), (1.0, 0.35))),
+        ],
+        (1, 2): [
+            # Curtain wall & right turret
+            ("line", ((0.0, 0.75), (0.20, 0.75))),
+            ("line", ((0.20, 1.0), (0.20, 0.0))),
+            ("line", ((0.75, 1.0), (0.75, 0.0))),
+            ("line", ((0.0, 0.35), (0.20, 0.35))),
+            ("line", ((0.75, 0.50), (1.0, 0.50))),
+        ],
+        (1, 3): [
+            ("poly", ((0.0, 0.50), (0.75, 0.50), (0.75, 0.0))),
+        ],
+        (2, 0): [
+            ("poly", ((0.20, 1.0), (0.20, 0.25), (1.0, 0.25))),
+        ],
+        (2, 1): [
+            ("poly", ((0.0, 0.25), (0.25, 0.25), (0.25, 1.0))),
+            ("poly", ((0.60, 1.0), (0.60, 0.25), (1.0, 0.25))),
+        ],
+        (2, 2): [
+            ("poly", ((0.0, 0.25), (0.20, 0.25), (0.20, 1.0))),
+            ("poly", ((0.75, 1.0), (0.75, 0.25), (0.0, 0.25))),
+        ],
+        (2, 3): [
+            ("poly", ((0.75, 1.0), (0.75, 0.25), (0.15, 0.25))),
+        ],
+    }
+    tile8_D = [
+        ("line", ((0.25, 1.0), (0.25, 0.0))),
+        ("line", ((0.0, 0.35), (0.25, 0.35))),
+        ("poly", ((0.80, 1.0), (0.80, 0.75), (1.0, 0.75))),
+        ("poly", ((0.60, 0.0), (0.60, 0.35), (1.0, 0.35))),
+    ]
+    opt8_strokes = [
+        _rot90_cw(tile8_D),
+        _flip_h(tile8_D),
+        _rot180(tile8_D),
+        tile8_D,
+        _rot90_ccw(tile8_D),
+    ]
+    practices.append((
+        3, 4, grid8, (1, 1), opt8_strokes, 3,
+        "Which square tile (A through E) is missing from the castle drawing below?",
+        "In the missing square, the left turret wall runs straight from 0.25 at the top to 0.25 at the bottom "
+        "(with the outer wall meeting it from the left at 0.35), while the right turret wall enters at 0.80 from "
+        "the top to meet the upper bridge at 0.75 on the right, and the lower gate rises from 0.60 at the bottom "
+        "to 0.35 on the right. Only tile D fits.",
+    ))
+
     # Verify all practice variations before sampling
     for nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, _, _ in practices:
         check_missing_tile_geometry(nr, nc, g_strokes, miss_rc, o_strokes, ans_idx)
@@ -689,10 +866,22 @@ def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
         random.shuffle(selected_practices)
 
     for idx, (nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, text, expl) in enumerate(selected_practices, start=1):
-        check_missing_tile_geometry(nr, nc, g_strokes, miss_rc, o_strokes, ans_idx)
+        # Randomly shuffle the 5 option tiles so every run has freshly randomized answer choices
+        perm = list(range(len(o_strokes)))
+        random.shuffle(perm)
+        shuffled_opts = [o_strokes[i] for i in perm]
+        new_ans_idx = perm.index(ans_idx)
+        ans_letter = LETTERS[new_ans_idx]
+        # Update explanation letter dynamically so it matches the randomized choice letter
+        orig_letter = LETTERS[ans_idx]
+        updated_expl = expl.replace(f"tile {orig_letter}", f"tile {ans_letter}").replace(
+            f"square {orig_letter}", f"square {ans_letter}"
+        )
+
+        check_missing_tile_geometry(nr, nc, g_strokes, miss_rc, shuffled_opts, new_ans_idx)
         fig_p = vstack([
             fig_tile_grid(nr, nc, g_strokes, miss_rc, s=30),
-            option_row([fig_tile(s, s=30) for s in o_strokes], gap=16),
+            option_row([fig_tile(s, s=30) for s in shuffled_opts], gap=16),
         ], gap=12)
         d.problem(
             f"Practice {set_num}.{idx}",
@@ -700,7 +889,7 @@ def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
             fig_p,
             "below",
         )
-        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
+        key.append((f"{set_num}.{idx}", ans_letter, updated_expl))
 
 
 GENERATE = q_2002_1
