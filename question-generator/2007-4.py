@@ -1,33 +1,19 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2007, Problem #4 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
-    option_row,
-    hstack,
-    vstack,
-    colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2007, 4)
 
 
@@ -35,25 +21,147 @@ def digit_sum(n):
     return sum(int(ch) for ch in str(n))
 
 
-def next_same_digit_sum(start_n):
+def next_same_digit_sum(start_n, direction="greater"):
     target = digit_sum(start_n)
-    n = start_n + 1
+    step = 1 if direction == "greater" else -1
+    n = start_n + step
     while digit_sum(n) != target:
-        n += 1
+        n += step
     return n
 
 
-def check_same_digit_sum(start_n, choices, ans_idx):
-    nxt = next_same_digit_sum(start_n)
+def check_same_digit_sum(start_n, choices, ans_idx, direction="greater"):
+    nxt = next_same_digit_sum(start_n, direction=direction)
     matches = [i for i, ch in enumerate(choices) if int(ch) == nxt]
-    assert matches == [ans_idx], f"Next same digit sum after {start_n} is {nxt}, choices={choices}, ans_idx={ans_idx}"
+    assert matches == [ans_idx], (
+        f"Same digit sum ({direction}) from {start_n} is {nxt}, choices={choices}, ans_idx={ans_idx}"
+    )
 
 
-def q_2007_4(d, key, set_num=1, include_orig=True, num_practice=3):
+def _generate_dynamic_digit_sum_problem(rng, mode_idx=0):
+    """Procedurally generate a next/previous number with same digit sum problem."""
+    m = mode_idx % 3
+
+    if m == 0:
+        # Mode 0: Standard 4-digit next number with same digit sum (nxt = start_n + 9)
+        direction = "greater"
+        while True:
+            d0 = rng.randint(1, 6)
+            d1 = rng.choice([0, 0, 1, 2, 3, 4])
+            d2 = rng.randint(0, 7)
+            d3 = rng.randint(4, 9)
+            start_n = d0 * 1000 + d1 * 100 + d2 * 10 + d3
+            if start_n != 2007:
+                break
+        nxt = next_same_digit_sum(start_n, "greater")
+        assert nxt == start_n + 9
+        s_val = digit_sum(start_n)
+        traps = [
+            start_n + 1,
+            nxt - 1,
+            nxt + 1,
+            d0 * 1000 + (d1 + 1) * 100 + d2 * 10 + (d3 - 1),
+            d0 * 1000 + d1 * 100 + d3 * 10 + d2,
+        ]
+        sum_expr = " + ".join(str(ch) for ch in str(start_n))
+        nxt_expr = " + ".join(str(ch) for ch in str(nxt))
+        text = (
+            f"What is the smallest number greater than <b>{start_n}</b> such that the sum of its digits is the same as "
+            f"the sum of the digits of {start_n}?"
+        )
+        expl = (
+            f"The sum of the digits of {start_n} is {sum_expr} = {s_val}. Increasing the tens digit from {d2} to "
+            f"{d2 + 1} and decreasing the ones digit from {d3} to {d3 - 1} gives {nxt} ({nxt_expr} = {s_val}), "
+            f"which is the first number greater than {start_n} with digit sum {s_val}."
+        )
+
+    elif m == 1:
+        # Mode 1: Rollover 4-digit number ending in 90 or 80 (e.g. 3090 -> 3108, 2080 -> 2107)
+        direction = "greater"
+        d0 = rng.randint(2, 7)
+        d2 = rng.choice([8, 9])
+        start_n = d0 * 1000 + d2 * 10
+        nxt = next_same_digit_sum(start_n, "greater")
+        s_val = digit_sum(start_n)
+        traps = [
+            start_n + 9,
+            (d0 * 10 + 1) * 100,
+            (d0 * 10 + 1) * 100 + (d2 - 1) * 10,
+            nxt + 9,
+            nxt - 1,
+        ]
+        sum_expr = " + ".join(str(ch) for ch in str(start_n))
+        nxt_expr = " + ".join(str(ch) for ch in str(nxt))
+        text = (
+            f"What is the first number greater than <b>{start_n}</b> such that the sum of its digits equals "
+            f"the sum of the digits of {start_n}?"
+        )
+        expl = (
+            f"The sum of the digits of {start_n} is {sum_expr} = {s_val}. Every number from {start_n + 1} to "
+            f"{(d0 * 10 + 1) * 100 - 1} has a digit sum larger than {s_val}. Moving to the {d0}100s, we need "
+            f"the last two digits to sum to {s_val} - ({d0} + 1) = {d2 - 1}, which gives {nxt} ({nxt_expr} = {s_val})."
+        )
+
+    else:
+        # Mode 2: Largest number SMALLER than start_n with the same sum of digits (nxt = start_n - 9)
+        direction = "smaller"
+        d0 = rng.randint(1, 6)
+        d1 = rng.choice([0, 2, 3, 5])
+        d2 = rng.randint(2, 8)
+        d3 = rng.randint(0, 6)
+        start_n = d0 * 1000 + d1 * 100 + d2 * 10 + d3
+        nxt = next_same_digit_sum(start_n, "smaller")
+        assert nxt == start_n - 9
+        s_val = digit_sum(start_n)
+        traps = [
+            start_n - 1,
+            nxt - 1,
+            nxt + 1,
+            start_n - 10,
+            d0 * 1000 + d1 * 100 + d3 * 10 + d2,
+        ]
+        sum_expr = " + ".join(str(ch) for ch in str(start_n))
+        nxt_expr = " + ".join(str(ch) for ch in str(nxt))
+        text = (
+            f"What is the largest number <b>smaller</b> than <b>{start_n}</b> such that the sum of its digits is the "
+            f"same as the sum of the digits of {start_n}?"
+        )
+        expl = (
+            f"The sum of the digits of {start_n} is {sum_expr} = {s_val}. Decreasing the tens digit from {d2} to "
+            f"{d2 - 1} and increasing the ones digit from {d3} to {d3 + 1} gives {nxt} ({nxt_expr} = {s_val}), "
+            f"which is the largest number smaller than {start_n} with digit sum {s_val}."
+        )
+
+    cands = {nxt}
+    for t in traps:
+        if len(cands) >= 5:
+            break
+        if t > 0 and t != nxt and (
+            (direction == "greater" and t > start_n) or (direction == "smaller" and t < start_n)
+        ):
+            cands.add(t)
+    for delta in [-9, -2, -1, 1, 2, 8, 9, 10, 18]:
+        if len(cands) >= 5:
+            break
+        v = nxt + delta
+        if v > 0 and v != nxt and (
+            (direction == "greater" and v > start_n) or (direction == "smaller" and v < start_n)
+        ):
+            cands.add(v)
+
+    vals = list(cands)[:5]
+    rng.shuffle(vals)
+    opts = [str(v) for v in vals]
+    ans_idx = vals.index(nxt)
+    check_same_digit_sum(start_n, opts, ans_idx, direction=direction)
+    return start_n, opts, ans_idx, direction, text, expl
+
+
+def q_2007_4(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Next Number with the Same Sum of Digits", "Based on 2007, Problem 4")
 
     opts0 = ["2016", "2115", "2008", "7002", "2070"]
-    check_same_digit_sum(2007, opts0, 0)
+    check_same_digit_sum(2007, opts0, 0, direction="greater")
     if include_orig:
         d.problem(
             "Original 2007 #4.",
@@ -70,48 +178,13 @@ def q_2007_4(d, key, set_num=1, include_orig=True, num_practice=3):
             "(2 + 0 + 1 + 6 = 9).",
         ))
 
-    practices = [
-        # Practice .1: Start = 2026 (sum = 10) -> next is 2035 (2+0+3+5 = 10) (Answer: C)
-        (
-            2026,
-            ["2027", "2034", "2035", "2116", "2062"],
-            2,
-            "What is the smallest number greater than <b>2026</b> such that the sum of its digits is the same as "
-            "the sum of the digits of 2026?",
-            "The sum of the digits of 2026 is 2 + 0 + 2 + 6 = 10. Increasing the tens digit from 2 to 3 and "
-            "decreasing the ones digit from 6 to 5 gives 2035, which is the first number after 2026 with digit sum 10.",
-        ),
-        # Practice .2: Start = 1408 (sum = 13) -> next is 1417 (1+4+1+7 = 13) (Answer: B)
-        (
-            1408,
-            ["1409", "1417", "1426", "1507", "1480"],
-            1,
-            "What is the first number greater than <b>1408</b> whose digits add up to the same sum as the digits of 1408?",
-            "The digits of 1408 add up to 1 + 4 + 0 + 8 = 13. The first number after 1408 with digit sum 13 is "
-            "1417 (1 + 4 + 1 + 7 = 13).",
-        ),
-        # Practice .3: Start = 3059 (sum = 17) -> 3068 (3+0+6+8 = 17) (Answer: D)
-        (
-            3059,
-            ["3060", "3067", "3069", "3068", "3158"],
-            3,
-            "What is the smallest number greater than <b>3059</b> that has the same sum of digits as 3059?",
-            "The digit sum of 3059 is 3 + 0 + 5 + 9 = 17. Increasing the tens digit by 1 (from 5 to 6) and decreasing "
-            "the ones digit by 1 (from 9 to 8) gives 3068, whose digits also sum to 3 + 0 + 6 + 8 = 17.",
-        ),
-        # Practice .4: Start = 4090 (sum = 13) -> 4091..4099 have sums 14..22; 4100..4108: 4108 has sum 4+1+0+8 = 13! (Answer: E)
-        (
-            4090,
-            ["4099", "4100", "4190", "4180", "4108"],
-            4,
-            "What is the first number greater than <b>4090</b> such that the sum of its digits equals the sum of the digits of 4090?",
-            "The sum of the digits of 4090 is 4 + 0 + 9 + 0 = 13. Every number from 4091 to 4099 has a digit sum larger "
-            "than 13. Moving to the 4100s, we need the last two digits to sum to 13 - (4 + 1) = 8, which gives 4108.",
-        ),
-    ]
-
-    for idx, (s_num, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
-        check_same_digit_sum(s_num, opts, ans_idx)
+    rng = random.Random(seed)
+    modes = [0, 1, 2]
+    rng.shuffle(modes)
+    for idx in range(1, num_practice + 1):
+        m = modes[(idx - 1) % len(modes)]
+        s_num, opts, ans_idx, direction, text, expl = _generate_dynamic_digit_sum_problem(rng, mode_idx=m)
+        check_same_digit_sum(s_num, opts, ans_idx, direction=direction)
         d.problem(
             f"Practice {set_num}.{idx}",
             text,
@@ -119,16 +192,13 @@ def q_2007_4(d, key, set_num=1, include_orig=True, num_practice=3):
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2007_4
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")

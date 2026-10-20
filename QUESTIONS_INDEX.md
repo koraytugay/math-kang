@@ -61,7 +61,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 |---|---|---|---|---|---|
 | **2007 #1** | `2007:1` | `question-generator/2007-1.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Forking Road Diagram** — Finding which combination of symbols/numbers can be collected along a branching path |
 | **2007 #3** | `2007:3` | `question-generator/2007-3.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Common Letters in Words** — Counting distinct common letters shared by two words |
-| **2007 #4** | `2007:4` | `question-generator/2007-4.py` | `argon` | 4 | **Next Number with Same Digit Sum** — Finding the smallest number greater than $N$ with the same digit sum |
+| **2007 #4** | `2007:4` | `question-generator/2007-4.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Next Number with Same Digit Sum** — Finding the smallest number greater than $N$ with the same digit sum |
 | **2007 #5** | `2007:5` | `question-generator/2007-5.py` | `argon` | 4 | **Number Chain in the Clouds** — Working backwards through a sequence of cloud arithmetic operations |
 | **2007 #8** | `2007:8` | `question-generator/2007-8.py` | `argon` | 3 | **Joining Polyominoes to Form a Rectangle** — Finding which piece joins with a given shape to make a solid rectangle |
 | **2007 #10** | `2007:10` | `question-generator/2007-10.py` | `argon` | 3 | **3×3 Mini-Sudoku (Latin Square)** — Deductions with `1, 2, 3` appearing once per row and column |
