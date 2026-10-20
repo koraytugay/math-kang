@@ -150,7 +150,7 @@ The following 33 question generators are currently implemented in `question-gene
 | `(2002, 10)` | `question-generator/2002-10.py` | `argon` (reviewed high effort, dynamic) | `q_2002_10` | Digit occurrences in sequential house/page/locker numbers |
 | `(2002, 11)` | `question-generator/2002-11.py` | `argon` (reviewed high effort, dynamic) | `q_2002_11` | Cracked clock face (1–12) partitioned into pieces with consecutive/target sums |
 | `(2002, 12)` | `question-generator/2002-12.py` | `argon` (reviewed high effort, dynamic) | `q_2002_12` | Kangaroo zigzag run on a dashed grid — comparing path lengths |
-| `(2002, 15)` | `question-generator/2002-15.py` | `argon` | `q_2002_15` | Rectangular flag silhouette in the wind — which silhouette is torn |
+| `(2002, 15)` | `question-generator/2002-15.py` | `argon` (reviewed high effort, dynamic) | `q_2002_15` | Rectangular flag silhouette in the wind — which silhouette is torn |
 | `(2002, 18)` | `question-generator/2002-18.py` | `argon` | `q_2002_18` | Pet/item logic deduction — 1-to-1 matching of 4 people and 4 pets/items |
 | `(2002, 20)` | `question-generator/2002-20.py` | `argon` | `q_2002_20` | 3D cube tunnel rearranged into a stepped pyramid — counting unused cubes |
 | `(2002, 21)` | `question-generator/2002-21.py` | `argon` | `q_2002_21` | Three digit cards & four basic operations — reaching a target number |

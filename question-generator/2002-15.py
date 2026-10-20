@@ -1,136 +1,178 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2002, Problem #15 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
     option_row,
-    hstack,
-    vstack,
     colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2002, 15)
 
 
-def fig_flag_silhouette(kind, s=1.0):
-    """Draw a flagpole and shaded flag silhouette of the specified kind."""
+def _build_flag_polygon(spec, x=0.0, y=0.0, s=1.0):
+    """Build the 2D polygon vertices and pole attachment coordinates (px, att_bot, att_top)
+    for a flag specification (either a string kind or a (kind, param) tuple).
+    """
+    if isinstance(spec, tuple):
+        kind, param = spec
+    else:
+        kind, param = spec, 0.0
+
+    px = x + 6 * s
+    att_bot = y + 14 * s
+    att_top = y + 44 * s
+    fw = (36 + param) * s
+
+    if kind == "flat":
+        pts = [(px, att_bot), (px, att_top), (px + fw, att_top), (px + fw, att_bot)]
+    elif kind == "fold_up_top":
+        lift = (6 + 0.5 * param) * s
+        pts = [
+            (px, att_bot),
+            (px, att_top),
+            (px + 8 * s, att_top),
+            (px + 8 * s, att_top + lift),
+            (px + fw, att_top + lift),
+            (px + fw, att_top - 2 * s),
+            (px + 8 * s, att_bot),
+        ]
+    elif kind == "fold_diag_peak":
+        pts = [
+            (px, att_bot),
+            (px, att_top),
+            (px + 16 * s, att_top),
+            (px + (20 + param) * s, att_top + 6 * s),
+            (px + 30 * s, att_top),
+            (px + fw + 2 * s, att_top),
+            (px + fw + 2 * s, att_top - 6 * s),
+        ]
+    elif kind == "slanted_right":
+        pts = [
+            (px, att_bot),
+            (px, att_top),
+            (px + fw + 2 * s, att_top),
+            (px + fw + 2 * s, att_top - 6 * s),
+            (px + fw - (8 + param) * s, att_bot),
+        ]
+    elif kind == "wavy_bottom":
+        pts = [
+            (px, att_bot),
+            (px, att_top),
+            (px + fw, att_top),
+            (px + fw - 4 * s, att_bot + (6 + 0.5 * param) * s),
+            (px + 18 * s, att_bot),
+        ]
+    elif kind == "fold_down_bottom":
+        dip = (5 + 0.5 * param) * s
+        pts = [
+            (px, att_bot),
+            (px, att_top),
+            (px + 10 * s, att_top),
+            (px + fw, att_bot + 4 * s),
+            (px + fw, att_bot - dip),
+            (px + 10 * s, att_bot - dip),
+            (px + 10 * s, att_bot),
+        ]
+    elif kind == "flutter_inward":
+        pts = [
+            (px, att_bot),
+            (px, att_top),
+            (px + fw, att_top - 2 * s),
+            (px + fw - 7 * s, (att_bot + att_top) / 2),
+            (px + fw, att_bot + 2 * s),
+        ]
+    elif kind == "torn_pole_bottom":
+        mid_y = (att_bot + att_top) / 2 + (3 + 0.5 * param) * s
+        pts = [
+            (px, mid_y),
+            (px, att_top),
+            (px + fw + 4 * s, att_top),
+            (px + 14 * s, att_bot + 4 * s),
+            (px + 14 * s, mid_y),
+        ]
+    elif kind == "torn_pole_top":
+        mid_y = (att_bot + att_top) / 2 - (2 + 0.5 * param) * s
+        pts = [
+            (px, att_bot),
+            (px, mid_y),
+            (px + 14 * s, mid_y),
+            (px + 14 * s, att_top),
+            (px + fw, att_top),
+            (px + fw - 6 * s, att_bot),
+        ]
+    elif kind == "torn_pole_middle":
+        mid_y = (att_bot + att_top) / 2
+        gap_h = (6 + 0.5 * param) * s
+        pts = [
+            (px, att_bot),
+            (px, mid_y - gap_h),
+            (px + 12 * s, mid_y),
+            (px, mid_y + gap_h),
+            (px, att_top),
+            (px + fw, att_top),
+            (px + fw, att_bot),
+        ]
+    elif kind == "giant_stretched":
+        shift = (10 + 0.5 * param) * s
+        pts = [
+            (px + shift, att_bot),
+            (px + shift, att_top),
+            (px + fw + 4 * s, att_top),
+            (px + fw + 4 * s, att_bot),
+        ]
+    elif kind == "torn_both_ends":
+        inset = (6 + 0.4 * param) * s
+        pts = [
+            (px, att_bot + inset),
+            (px, att_top - inset),
+            (px + 12 * s, att_top),
+            (px + fw, att_top),
+            (px + fw, att_bot),
+            (px + 12 * s, att_bot),
+        ]
+    else:
+        raise ValueError(f"Unknown flag kind: {kind}")
+
+    return pts, px, att_bot, att_top
+
+
+def is_flag_intact_on_pole(spec, s=1.0):
+    """Geometrically verify from the 2D polygon vertices whether the flag covers the full
+    vertical attachment segment [att_bot, att_top] along the pole line x = px.
+    """
+    pts, px, att_bot, att_top = _build_flag_polygon(spec, 0.0, 0.0, s=s)
+    pole_len = 0.0
+    n = len(pts)
+    for i in range(n):
+        x1, y1 = pts[i]
+        x2, y2 = pts[(i + 1) % n]
+        if abs(x1 - px) < 1e-6 and abs(x2 - px) < 1e-6:
+            lo = max(min(y1, y2), att_bot)
+            hi = min(max(y1, y2), att_top)
+            if hi > lo:
+                pole_len += hi - lo
+    return abs(pole_len - (att_top - att_bot)) < 1e-4
+
+
+def fig_flag_silhouette(spec, s=1.0):
+    """Draw a flagpole and shaded flag silhouette of the specified kind/spec."""
     w = 54 * s
     h = 54 * s
 
     def draw(c, x, y):
-        px = x + 6 * s
         py0 = y + 4 * s
-        py1 = y + 44 * s  # Top of attachment on pole (pole height = 40*s, attachment height = 30*s: py1-30*s to py1)
-        att_bot = y + 14 * s
-        att_top = y + 44 * s
-        fw = 36 * s
-
-        # Flag polygon vertices depending on kind
-        if kind == "flat":
-            # Full rectangular silhouette (like 2002 #15 C)
-            pts = [(px, att_bot), (px, att_top), (px + fw, att_top), (px + fw, att_bot)]
-        elif kind == "fold_up_top":
-            # Like 2002 #15 A: attached from att_bot to att_top, loose part rises slightly above att_top
-            pts = [
-                (px, att_bot),
-                (px, att_top),
-                (px + 8 * s, att_top),
-                (px + 8 * s, att_top + 6 * s),
-                (px + fw, att_top + 6 * s),
-                (px + fw, att_top - 2 * s),
-                (px + 8 * s, att_bot),
-            ]
-        elif kind == "torn_pole_bottom":
-            # Like 2002 #15 B (TORN!): missing lower half along the pole!
-            mid_y = (att_bot + att_top) / 2 + 3 * s
-            pts = [
-                (px, mid_y),
-                (px, att_top),
-                (px + fw + 4 * s, att_top),
-                (px + 14 * s, att_bot + 4 * s),
-                (px + 14 * s, mid_y),
-            ]
-        elif kind == "fold_diag_peak":
-            # Like 2002 #15 D: full attachment along pole, diagonal fold with peak on top
-            pts = [
-                (px, att_bot),
-                (px, att_top),
-                (px + 16 * s, att_top),
-                (px + 20 * s, att_top + 6 * s),
-                (px + 30 * s, att_top),
-                (px + fw + 2 * s, att_top),
-                (px + fw + 2 * s, att_top - 6 * s),
-            ]
-        elif kind == "slanted_right":
-            # Like 2002 #15 E: full attachment along pole, right edge slanted inward
-            pts = [
-                (px, att_bot),
-                (px, att_top),
-                (px + fw + 2 * s, att_top),
-                (px + fw + 2 * s, att_top - 6 * s),
-                (px + fw - 8 * s, att_bot),
-            ]
-        elif kind == "torn_pole_top":
-            # TORN: missing upper half along the pole!
-            mid_y = (att_bot + att_top) / 2 - 2 * s
-            pts = [
-                (px, att_bot),
-                (px, mid_y),
-                (px + 14 * s, mid_y),
-                (px + 14 * s, att_top),
-                (px + fw, att_top),
-                (px + fw - 6 * s, att_bot),
-            ]
-        elif kind == "torn_pole_middle":
-            # TORN: V-gap cut right out of the middle of the pole attachment!
-            mid_y = (att_bot + att_top) / 2
-            pts = [
-                (px, att_bot),
-                (px, mid_y - 6 * s),
-                (px + 12 * s, mid_y),
-                (px, mid_y + 6 * s),
-                (px, att_top),
-                (px + fw, att_top),
-                (px + fw, att_bot),
-            ]
-        elif kind == "giant_stretched":
-            # IMPOSSIBLE: horizontal length is fine, but vertical pole edge is fine, wait:
-            # What if there is a hole/split or detached from pole completely?
-            pts = [
-                (px + 10 * s, att_bot),
-                (px + 10 * s, att_top),
-                (px + fw + 4 * s, att_top),
-                (px + fw + 4 * s, att_bot),
-            ]
-        elif kind == "wavy_bottom":
-            pts = [
-                (px, att_bot),
-                (px, att_top),
-                (px + fw, att_top),
-                (px + fw - 4 * s, att_bot + 6 * s),
-                (px + 18 * s, att_bot),
-            ]
-        else:
-            pts = [(px, att_bot), (px, att_top), (px + fw, att_top), (px + fw, att_bot)]
+        py1 = y + 44 * s
+        pts, px, _, _ = _build_flag_polygon(spec, x, y, s=s)
 
         p = c.beginPath()
         p.moveTo(*pts[0])
@@ -153,16 +195,106 @@ def fig_flag_silhouette(kind, s=1.0):
     return w, h, draw
 
 
-def check_flag_silhouette(kinds, expected_idx, mode="impossible"):
-    torn_kinds = {"torn_pole_bottom", "torn_pole_top", "torn_pole_middle", "giant_stretched"}
+def check_flag_silhouette(specs, expected_idx, mode="impossible"):
     if mode == "impossible":
-        matches = [i for i, k in enumerate(kinds) if k in torn_kinds]
+        matches = [i for i, sp in enumerate(specs) if not is_flag_intact_on_pole(sp)]
     else:
-        matches = [i for i, k in enumerate(kinds) if k not in torn_kinds]
-    assert matches == [expected_idx], f"Flag silhouette mismatch: {matches} vs {expected_idx}"
+        matches = [i for i, sp in enumerate(specs) if is_flag_intact_on_pole(sp)]
+    assert matches == [expected_idx], f"Flag silhouette geometric check failed: {matches} vs {expected_idx}"
 
 
-def q_2002_15(d, key, set_num=1, include_orig=True, num_practice=3):
+INTACT_KINDS = [
+    "flat",
+    "fold_up_top",
+    "fold_diag_peak",
+    "slanted_right",
+    "wavy_bottom",
+    "fold_down_bottom",
+    "flutter_inward",
+]
+
+TORN_SPECS = [
+    (
+        "torn_pole_bottom",
+        "Because the left edge of the rectangular flag is fastened to the pole from top to bottom of the attachment, "
+        "the silhouette must touch the entire attachment segment along the pole. Picture %s is missing the lower part "
+        "along the pole, which can only happen if the flag is torn.",
+    ),
+    (
+        "torn_pole_top",
+        "Because the left edge of the rectangular flag is fastened to the pole along the entire attachment segment, "
+        "the silhouette must cover that full segment on the pole. Picture %s is missing the upper half along the pole, "
+        "which is impossible unless the flag is torn.",
+    ),
+    (
+        "torn_pole_middle",
+        "In picture %s, there is a V-shaped gap right along the middle of the flagpole where the flag is attached. "
+        "Since the left edge is fixed to the pole, that gap cannot appear unless the flag is ripped.",
+    ),
+    (
+        "giant_stretched",
+        "In picture %s, there is an empty gap between the flagpole and the entire flag! Since the flag's left side is "
+        "attached directly to the pole, picture %s is impossible unless the flag has come completely loose from the pole.",
+    ),
+    (
+        "torn_both_ends",
+        "In picture %s, both the top and bottom corners of the flag's left edge have pulled away from the flagpole. "
+        "That cannot happen unless the flag is torn at both ends of its attachment.",
+    ),
+]
+
+
+def _generate_dynamic_flag_problem(rng, variant_idx=0):
+    """Procedurally generate a flag silhouette problem with randomized shapes and shuffled A-E options."""
+    use_possible_mode = (variant_idx % 4 == 3)
+
+    if not use_possible_mode:
+        mode = "impossible"
+        torn_kind, reason_tmpl = TORN_SPECS[variant_idx % len(TORN_SPECS)]
+        chosen_intact = rng.sample(INTACT_KINDS, 4)
+        specs = [(k, rng.choice([-2.0, 0.0, 2.0])) for k in chosen_intact]
+        bad_spec = (torn_kind, rng.choice([-1.5, 0.0, 1.5]))
+        all_specs = specs + [bad_spec]
+        order = list(range(5))
+        rng.shuffle(order)
+        shuffled_specs = [all_specs[i] for i in order]
+        ans_idx = order.index(4)
+        letter = LETTERS[ans_idx]
+        expl = reason_tmpl.replace("%s", letter)
+
+        actor = rng.choice(["Leo", "Maya", "Sam", "Elena", "Noah"])
+        noun = rng.choice(["flag", "banner"])
+        text = (
+            f"{actor} watches a rectangular {noun} attached along its left vertical edge to a pole "
+            f"and sketches 5 silhouettes as the wind blows. Which sketch <b>cannot</b> happen unless the {noun} is torn from the pole?"
+        )
+    else:
+        mode = "possible"
+        chosen_torn = rng.sample([k for k, _ in TORN_SPECS], 4)
+        good_kind = rng.choice(INTACT_KINDS)
+        specs = [(k, rng.choice([-1.5, 0.0, 1.5])) for k in chosen_torn]
+        good_spec = (good_kind, rng.choice([-2.0, 0.0, 2.0]))
+        all_specs = specs + [good_spec]
+        order = list(range(5))
+        rng.shuffle(order)
+        shuffled_specs = [all_specs[i] for i in order]
+        ans_idx = order.index(4)
+        letter = LETTERS[ans_idx]
+        other_letters = ", ".join(LETTERS[i] for i in range(5) if i != ans_idx)
+        text = (
+            "Four of the 5 flag silhouettes below are impossible unless the rectangular flag is torn from the pole. "
+            "Which silhouette <b>can</b> happen with an intact flag?"
+        )
+        expl = (
+            f"Only in {letter} is the flag attached continuously along its full vertical segment on the flagpole. "
+            f"In {other_letters}, parts of the flag are detached from the pole."
+        )
+
+    check_flag_silhouette(shuffled_specs, ans_idx, mode=mode)
+    return shuffled_specs, ans_idx, mode, text, expl
+
+
+def q_2002_15(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Flag Silhouette in the Wind", "Based on 2002, Problem 15")
 
     orig_kinds = ["fold_up_top", "torn_pole_bottom", "flat", "fold_diag_peak", "slanted_right"]
@@ -184,66 +316,29 @@ def q_2002_15(d, key, set_num=1, include_orig=True, num_practice=3):
             "left edge is missing from the pole, which is impossible unless the flag is torn away from the pole.",
         ))
 
-    practices = [
-        (
-            ["flat", "fold_diag_peak", "torn_pole_top", "slanted_right", "wavy_bottom"],
-            2,
-            "impossible",
-            "Leo watches a rectangular banner attached along its left vertical edge to a flagpole. "
-            "He sketches 5 silhouettes as the wind blows. Which sketch <b>cannot</b> happen unless the banner is torn from the pole?",
-            "Because the left edge of the rectangular banner is fastened to the pole from top to bottom of the attachment, "
-            "the silhouette must touch the entire attachment segment along the pole. Sketch C is missing the upper half along the pole, "
-            "which can only happen if the banner is torn.",
-        ),
-        (
-            ["torn_pole_middle", "flat", "slanted_right", "fold_up_top", "fold_diag_peak"],
-            0,
-            "impossible",
-            "Maya draws 5 silhouettes of a rectangular flag flying in the wind. One silhouette is impossible "
-            "unless the flag is ripped along the pole. Which one is it?",
-            "In picture A, there is a triangular gap right along the middle of the flagpole where the flag is supposed to be "
-            "attached. Since the left edge is fixed to the pole, that gap cannot appear unless the flag is torn.",
-        ),
-        (
-            ["slanted_right", "fold_up_top", "wavy_bottom", "giant_stretched", "flat"],
-            3,
-            "impossible",
-            "Sam looks at the shadow of a rectangular flag fastened to a vertical pole. Which of the 5 shadows below "
-            "is <b>impossible</b> unless the flag has come completely loose from the pole?",
-            "In shadow D, there is an empty gap between the flagpole and the entire flag! Since the flag's left side is "
-            "attached directly to the pole, shadow D is impossible unless the flag is torn off the pole.",
-        ),
-        (
-            ["torn_pole_bottom", "torn_pole_top", "torn_pole_middle", "giant_stretched", "slanted_right"],
-            4,
-            "possible",
-            "Four of the 5 flag silhouettes below are impossible unless the rectangular flag is torn from the pole. "
-            "Which silhouette <b>can</b> happen with an intact flag?",
-            "Only in E is the flag attached continuously along its full vertical segment on the flagpole while the free right edge "
-            "folds slightly inward in the wind. In A, B, C, and D, parts of the flag are detached from the pole.",
-        ),
-    ]
-
-    for idx, (kinds, ans_idx, mode, text, expl) in enumerate(practices[:num_practice], start=1):
-        check_flag_silhouette(kinds, ans_idx, mode=mode)
+    rng = random.Random(seed)
+    v_order = list(range(5))
+    rng.shuffle(v_order)
+    for idx in range(1, num_practice + 1):
+        specs, ans_idx, mode, text, expl = _generate_dynamic_flag_problem(
+            rng, variant_idx=v_order[(idx - 1) % len(v_order)]
+        )
+        check_flag_silhouette(specs, ans_idx, mode=mode)
         d.problem(
             f"Practice {set_num}.{idx}",
             text,
-            option_row([fig_flag_silhouette(k) for k in kinds], gap=14),
+            option_row([fig_flag_silhouette(sp) for sp in specs], gap=14),
             "below",
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2002_15
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")

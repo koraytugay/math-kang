@@ -32,7 +32,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 | **2002 #10** | `2002:10` | `question-generator/2002-10.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Digit Occurrences** — Counting how many times a digit occurs in sequential house/page numbers |
 | **2002 #11** | `2002:11` | `question-generator/2002-11.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Cracked Clock Face** — Partitioning clock face `1–12` (sum = 78) into pieces with consecutive/target sums |
 | **2002 #12** | `2002:12` | `question-generator/2002-12.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Kangaroo Zigzag Run** — Comparing total grid-segment path lengths of 3 runners on a dashed grid |
-| **2002 #15** | `2002:15` | `question-generator/2002-15.py` | `argon` | 4 | **Flag Silhouette in the Wind** — Identifying which flag silhouette is impossible unless torn from the pole |
+| **2002 #15** | `2002:15` | `question-generator/2002-15.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Flag Silhouette in the Wind** — Identifying which flag silhouette is impossible unless torn from the pole |
 | **2002 #18** | `2002:18` | `question-generator/2002-18.py` | `argon` | 4 | **Pet & Item Logic Deduction** — 1-to-1 matching of 4 people and 4 pets/items from logical clues |
 | **2002 #20** | `2002:20` | `question-generator/2002-20.py` | `argon` | 4 | **3D Cube Tunnel to Pyramid** — Counting unit cubes in a 3D tunnel vs. a stepped pyramid |
 | **2002 #21** | `2002:21` | `question-generator/2002-21.py` | `argon` | 4 | **Three Digit Cards & Four Operations** — Determining who cannot reach a target number using 3 cards once |
