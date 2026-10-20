@@ -51,7 +51,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 | **2003 #14** | `2003:14` | `question-generator/2003-14.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Area of Block Letters on a Grid** — Computing area of polygonal letters (`N`, `Z`, `V`, `M`) on a $1\text{ cm}$ grid |
 | **2003 #16** | `2003:16` | `question-generator/2003-16.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Book Page Number Digits** — Finding total pages in a book from the total number of digits used |
 | **2003 #17** | `2003:17` | `question-generator/2003-17.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Alternating Black & White Barcode** — Counting narrow vs. wide black bars in an alternating barcode |
-| **2003 #18** | `2003:18` | `question-generator/2003-18.py` | `argon` | 3 | **Covering a Grid Shape with Polyominoes** — Selecting which two pieces cover a target grid region |
+| **2003 #18** | `2003:18` | `question-generator/2003-18.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Covering a Grid Shape with Polyominoes** — Selecting which two pieces cover a target grid region |
 
 ---
 
