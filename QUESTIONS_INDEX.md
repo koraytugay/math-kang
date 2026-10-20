@@ -27,7 +27,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 | **2002 #1** | `2002:1` | `question-generator/2002-1.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Missing Puzzle Tile** — Finding the missing square tile from a grid drawing |
 | **2002 #4** | `2002:4` | `question-generator/2002-4.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Cutting a Square into Polyominoes** — Identifying which piece was not obtained |
 | **2002 #6** | `2002:6` | `question-generator/2002-6.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Square & Rectangle Perimeters** — Comparing perimeter of square $ABCD$ and rectangle $AMTD$ |
-| **2002 #7** | `2002:7` | `question-generator/2002-7.py` | `argon` | 3 | **Castle Skyline Contour** — Matching contour segments to a castle silhouette |
+| **2002 #7** | `2002:7` | `question-generator/2002-7.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Castle Skyline Contour** — Matching contour segments to a castle silhouette |
 | **2002 #9** | `2002:9` | `question-generator/2002-9.py` | `argon` | 3 | **Two-Pan Balance Scale** — Finding the weight of one fruit from tilted/balanced scales |
 | **2002 #10** | `2002:10` | `question-generator/2002-10.py` | `argon` | 5 | **Digit Occurrences** — Counting how many times a digit occurs in sequential house/page numbers |
 | **2002 #11** | `2002:11` | `question-generator/2002-11.py` | `argon` | 5 | **Cracked Clock Face** — Partitioning clock face `1–12` (sum = 78) into pieces with consecutive/target sums |
