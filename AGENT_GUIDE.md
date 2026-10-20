@@ -4,19 +4,23 @@ Read this entire file before doing anything.
 
 ---
 
-## Core Rule: Every Question Gets Its Own Dedicated Implementation
+## Core Rule: Every Question Gets Its Own Dedicated File in `question-generator/`
 
 Math Kangaroo problems are unique. **We do NOT use generic question generators.**
-Every single contest problem (`<year> #<number>`) must have **its own dedicated, custom-written method**
-(`q_<year>_<number>`) implemented from scratch the first time the user requests it.
+Every single contest problem (`<year> #<number>`) must have **its own dedicated, self-contained Python generator file** in `question-generator/<year>-<number>.py` (for example, `question-generator/2003-10.py`), implemented from scratch the first time the user requests it.
 
-- Each question's method is responsible for:
-  1. Redrawing that specific question's exact visual/diagram (if any) using custom ReportLab code tailored to that problem.
-  2. Verifying the math/logic with a custom assertion/solver specific to that problem.
-  3. Rendering the original problem and the requested number of custom-crafted similar practice problems.
-- **Never** try to force-fit a new question into another question's helper or a generic template.
-  When the user asks for `2007 - 5`, you must inspect Question 5 of `2007.pdf` and write a brand-new,
-  bespoke implementation specifically for `2007 #5`.
+- **Mandatory Model Attribution Rule:**
+  Every generator file `question-generator/<year>-<number>.py` **must** declare which AI model was used to generate or update that generator, both as a top comment (`# Model: <model-name>`) and as a module-level constant (`MODEL = "<model-name>"`, e.g. `MODEL = "argon"`).
+  - `generate_practice.py` programmatically asserts that every loaded generator file defines a non-empty `MODEL` string.
+  - **Why this matters:** Stronger models are used to create, review, and mathematically verify the generator files in `question-generator/`, while lighter/faster models can later generate practice worksheets and random exams simply by running those verified generators without rewriting them.
+- Each `question-generator/<year>-<number>.py` file is responsible for:
+  1. Declaring `# Model: <model-name>`, `MODEL = "<model-name>"`, `QUESTION_ID = (<year>, <number>)`, and `GENERATE = q_<year>_<number>`.
+  2. Redrawing that specific question's exact visual/diagram (if any) using custom ReportLab code tailored to that problem.
+  3. Verifying the math/logic/geometry with an exact programmatic assertion/solver specific to that problem.
+  4. Rendering the original problem and the requested number of custom-crafted similar practice problems.
+- **Never** try to force-fit a new question into another question's file or a generic template.
+  When the user asks for `2007 - 5`, you must inspect Question 5 of `2007.pdf` and create a brand-new,
+  bespoke generator file `question-generator/2007-5.py` specifically for `2007 #5`.
 
 ---
 
@@ -28,12 +32,12 @@ and any new PDFs the user adds over time).
 When the user specifies questions (via `PROMPT_TEMPLATE.md`, via `prompt-random.md` + `question-pool.txt`, or directly in chat, e.g.
 `2002: 4, 7, 9` and `2003: 9, 12, 14`), you must:
 
-1. Check `QUESTIONS_INDEX.md` (and `QUESTIONS` in `generate_practice.py`) to see which of the requested `(year, number)` questions already have a dedicated `q_<year>_<number>` method, and which ones are **new (not yet implemented)**.
+1. Check `QUESTIONS_INDEX.md` and the `question-generator/` directory to see which of the requested `(year, number)` questions already have a dedicated `question-generator/<year>-<number>.py` file, and which ones are **new (not yet implemented)**.
 2. For every **new** question:
    - Extract the text and render a high-DPI crop of that specific question from `<year>.pdf`.
    - Visually inspect the image carefully (count every grid line, cube, shape, etc.) and solve the original problem.
-   - Write a **brand-new dedicated method `q_<year>_<number>(d, key, set_num, include_orig=True, num_practice=...)`** (plus its own bespoke drawing and answer-checking helper functions) specifically for that question.
-   - **Update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md`** so the new question is listed in the index and guide.
+   - Create a **brand-new dedicated generator file `question-generator/<year>-<number>.py`** with `# Model: <model-name>`, `MODEL = "<model-name>"`, `QUESTION_ID = (<year>, <number>)`, bespoke drawing and exact answer-checking helper functions, and `q_<year>_<number>(d, key, set_num, include_orig=True, num_practice=...)` (`GENERATE = q_<year>_<number>`).
+   - **Update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md`** so the new question generator file and its `MODEL` are listed in the index and guide.
 3. Generate **a brand-new worksheet PDF for every request in the `generated/` folder**:
    - **Never amend or overwrite existing generated files.** Every time questions are requested, generate a completely new worksheet PDF.
    - **Keep the repository root clean:** All generated worksheet PDFs must be stored inside the `generated/` directory (e.g. `generated/YYYY-MM-DD-HH-MM-SS.pdf`).
@@ -87,11 +91,18 @@ View the cropped image. Count every grid cell, segment, cube, shading, or label.
   - Make wrong choices plausible and **assert in code** that there is **only one** valid answer.
   - The final practice variation in a set can include a fun small twist (e.g., asking for the complement).
 
-### Step 4: Implement a dedicated `q_<year>_<num>(d, key, set_num, include_orig=True, num_practice=...)` method
-Write bespoke helper functions and a dedicated `q_<year>_<num>` function in
-`generate_practice.py` (and register it in `QUESTIONS[(year, num)]`).
+### Step 4: Create a dedicated `question-generator/<year>-<num>.py` file
+Create `question-generator/<year>-<num>.py` containing:
+- `# Model: <model-name>` at line 1 and `MODEL = "<model-name>"` (e.g., `MODEL = "argon"`).
+- `QUESTION_ID = (<year>, <num>)`
+- Bespoke figure and exact solver helper functions (`fig_*`, `check_*`)
+- `def q_<year>_<num>(d, key, set_num=1, include_orig=True, num_practice=3): ...`
+- `GENERATE = q_<year>_<num>`
+- A standalone `if __name__ == "__main__":` block so running `.venv/bin/python question-generator/<year>-<num>.py` directly executes and verifies all assertions for that question.
 
-What `generate_practice.py` provides for **page layout only**:
+`generate_practice.py` automatically discovers and loads every `question-generator/<year>-<num>.py` file.
+
+What `question-generator/common.py` provides for **page layout only**:
 - `Doc(path)`: PDF page canvas with automatic page breaks and page-number footers.
   - `d.heading(title, subtitle)`
   - `d.problem(label, html_text, fig=None, fig_pos="right"|"below", choices=None, choice_cols=5)`
@@ -123,50 +134,50 @@ Whenever you implement one or more new questions:
 
 ---
 
-## 4. Currently Implemented Questions (`QUESTIONS_INDEX.md` & `generate_practice.py`)
+## 4. Currently Implemented Question Generators (`question-generator/` & `QUESTIONS_INDEX.md`)
 
 See **`QUESTIONS_INDEX.md`** for the full user-facing index (including quick summary of implemented vs. remaining question numbers per year).
 
-The following 32 questions are currently implemented:
+The following 33 question generators are currently implemented in `question-generator/`:
 
-| Question ID | Function in `generate_practice.py` | Description |
-|---|---|---|
-| `(2002, 1)` | `q_2002_1(d, key, set_num, include_orig=True)` | Grid puzzle / picture tile — finding the missing square tile |
-| `(2002, 4)` | `q_2002_4(d, key, set_num, include_orig=True)` | 4×4 / 5×5 square cut along grid lines into polyomino pieces |
-| `(2002, 6)` | `q_2002_6(d, key, set_num, include_orig=True)` | Square and rectangle perimeters (perimeter difference) |
-| `(2002, 7)` | `q_2002_7(d, key, set_num, include_orig=True)` | Castle skyline contour — which piece cannot belong |
-| `(2002, 9)` | `q_2002_9(d, key, set_num, include_orig=True)` | Tilted/level two-pan balance scale with fruits |
-| `(2002, 10)` | `q_2002_10(d, key, set_num, include_orig=True, num_practice=5)` | Digit occurrences in sequential house/page/locker numbers |
-| `(2002, 11)` | `q_2002_11(d, key, set_num, include_orig=True, num_practice=5)` | Cracked clock face (1–12) partitioned into pieces with consecutive/target sums |
-| `(2002, 12)` | `q_2002_12(d, key, set_num, include_orig=True, num_practice=5)` | Kangaroo zigzag run on a dashed grid — comparing path lengths |
-| `(2002, 15)` | `q_2002_15(d, key, set_num, include_orig=True, num_practice=3)` | Rectangular flag silhouette in the wind — which silhouette is torn |
-| `(2002, 18)` | `q_2002_18(d, key, set_num, include_orig=True, num_practice=3)` | Pet/item logic deduction — 1-to-1 matching of 4 people and 4 pets/items |
-| `(2002, 20)` | `q_2002_20(d, key, set_num, include_orig=True, num_practice=3)` | 3D cube tunnel rearranged into a stepped pyramid — counting unused cubes |
-| `(2002, 21)` | `q_2002_21(d, key, set_num, include_orig=True, num_practice=3)` | Three digit cards & four basic operations — reaching a target number |
-| `(2002, 22)` | `q_2002_22(d, key, set_num, include_orig=True, num_practice=3)` | Seating permutations around a table/row with fixed seats |
-| `(2002, 24)` | `q_2002_24(d, key, set_num, include_orig=True, num_practice=3)` | Odometer distance until all digits are distinct again |
-| `(2003, 9)` | `q_2003_9(d, key, set_num, include_orig=True)` | 3D W×H×D brick of cubes (red outside, blue inside) |
-| `(2003, 10)` | `q_2003_10(d, key, set_num, include_orig=True, num_practice=3)` | Metric length conversion and addition (`m`, `dm`, `cm`, `mm`) |
-| `(2003, 12)` | `q_2003_12(d, key, set_num, include_orig=True)` | 2D paper net of a house folded into 3D isometric houses A–E |
-| `(2003, 14)` | `q_2003_14(d, key, set_num, include_orig=True)` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
-| `(2003, 16)` | `q_2003_16(d, key, set_num, include_orig=True, num_practice=3)` | Total pages in a book from total digits used for page numbers |
-| `(2003, 17)` | `q_2003_17(d, key, set_num, include_orig=True, num_practice=3)` | Alternating black and white barcode — wide vs. narrow black bars |
-| `(2003, 18)` | `q_2003_18(d, key, set_num, include_orig=True)` | Covering an empty shape on a square grid using two polyomino pieces |
-| `(2007, 1)` | `q_2007_1(d, key, set_num, include_orig=True)` | Forking road diagram — choosing one number/letter per road split |
-| `(2007, 3)` | `q_2007_3(d, key, set_num, include_orig=True, num_practice=3)` | Counting common letters shared by two words |
-| `(2007, 4)` | `q_2007_4(d, key, set_num, include_orig=True, num_practice=3)` | Next number greater than $N$ with the same sum of digits |
-| `(2007, 5)` | `q_2007_5(d, key, set_num, include_orig=True, num_practice=3)` | Number chain in the clouds — working backwards through arithmetic steps |
-| `(2007, 8)` | `q_2007_8(d, key, set_num, include_orig=True)` | Joining a piece with the given shape to form a solid rectangle |
-| `(2007, 10)` | `q_2007_10(d, key, set_num, include_orig=True)` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
-| `(2007, 12)` | `q_2007_12(d, key, set_num, include_orig=True, num_practice=3)` | Calendar birthday date calculation given older/younger offset |
-| `(2007, 14)` | `q_2007_14(d, key, set_num, include_orig=True)` | 3D cube aquarium (3×3×3) — counting 1 dm cubes inside / missing to fill |
-| `(2007, 17)` | `q_2007_17(d, key, set_num, include_orig=True, num_practice=3)` | Painted 3D cube cut into unit cubes — counting cubes with $k$ painted faces |
-| `(2007, 21)` | `q_2007_21(d, key, set_num, include_orig=True, num_practice=3)` | Growing grid pattern of black and white cells — counting white cells |
-| `(2007, 23)` | `q_2007_23(d, key, set_num, include_orig=True, num_practice=3)` | Total digits needed to write all numbers from $1$ to $N$ |
-| `(2007, 24)` | `q_2007_24(d, key, set_num, include_orig=True, num_practice=3)` | Square paper folded twice and cut at a corner — unfolded paper design |
+| Question ID | Generator File | Model | Function | Description |
+|---|---|---|---|---|
+| `(2002, 1)` | `question-generator/2002-1.py` | `argon` | `q_2002_1` | Grid puzzle / picture tile — finding the missing square tile |
+| `(2002, 4)` | `question-generator/2002-4.py` | `argon` | `q_2002_4` | 4×4 / 5×5 square cut along grid lines into polyomino pieces |
+| `(2002, 6)` | `question-generator/2002-6.py` | `argon` | `q_2002_6` | Square and rectangle perimeters (perimeter difference) |
+| `(2002, 7)` | `question-generator/2002-7.py` | `argon` | `q_2002_7` | Castle skyline contour — which piece cannot belong |
+| `(2002, 9)` | `question-generator/2002-9.py` | `argon` | `q_2002_9` | Tilted/level two-pan balance scale with fruits |
+| `(2002, 10)` | `question-generator/2002-10.py` | `argon` | `q_2002_10` | Digit occurrences in sequential house/page/locker numbers |
+| `(2002, 11)` | `question-generator/2002-11.py` | `argon` | `q_2002_11` | Cracked clock face (1–12) partitioned into pieces with consecutive/target sums |
+| `(2002, 12)` | `question-generator/2002-12.py` | `argon` | `q_2002_12` | Kangaroo zigzag run on a dashed grid — comparing path lengths |
+| `(2002, 15)` | `question-generator/2002-15.py` | `argon` | `q_2002_15` | Rectangular flag silhouette in the wind — which silhouette is torn |
+| `(2002, 18)` | `question-generator/2002-18.py` | `argon` | `q_2002_18` | Pet/item logic deduction — 1-to-1 matching of 4 people and 4 pets/items |
+| `(2002, 20)` | `question-generator/2002-20.py` | `argon` | `q_2002_20` | 3D cube tunnel rearranged into a stepped pyramid — counting unused cubes |
+| `(2002, 21)` | `question-generator/2002-21.py` | `argon` | `q_2002_21` | Three digit cards & four basic operations — reaching a target number |
+| `(2002, 22)` | `question-generator/2002-22.py` | `argon` | `q_2002_22` | Seating permutations around a table/row with fixed seats |
+| `(2002, 24)` | `question-generator/2002-24.py` | `argon` | `q_2002_24` | Odometer distance until all digits are distinct again |
+| `(2003, 9)` | `question-generator/2003-9.py` | `argon` | `q_2003_9` | 3D W×H×D brick of cubes (red outside, blue inside) |
+| `(2003, 10)` | `question-generator/2003-10.py` | `argon` | `q_2003_10` | Metric length conversion and addition (`m`, `dm`, `cm`, `mm`) |
+| `(2003, 12)` | `question-generator/2003-12.py` | `argon` | `q_2003_12` | 2D paper net of a house folded into 3D isometric houses A–E |
+| `(2003, 14)` | `question-generator/2003-14.py` | `argon` | `q_2003_14` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
+| `(2003, 16)` | `question-generator/2003-16.py` | `argon` | `q_2003_16` | Total pages in a book from total digits used for page numbers |
+| `(2003, 17)` | `question-generator/2003-17.py` | `argon` | `q_2003_17` | Alternating black and white barcode — wide vs. narrow black bars |
+| `(2003, 18)` | `question-generator/2003-18.py` | `argon` | `q_2003_18` | Covering an empty shape on a square grid using two polyomino pieces |
+| `(2007, 1)` | `question-generator/2007-1.py` | `argon` | `q_2007_1` | Forking road diagram — choosing one number/letter per road split |
+| `(2007, 3)` | `question-generator/2007-3.py` | `argon` | `q_2007_3` | Counting common letters shared by two words |
+| `(2007, 4)` | `question-generator/2007-4.py` | `argon` | `q_2007_4` | Next number greater than $N$ with the same sum of digits |
+| `(2007, 5)` | `question-generator/2007-5.py` | `argon` | `q_2007_5` | Number chain in the clouds — working backwards through arithmetic steps |
+| `(2007, 8)` | `question-generator/2007-8.py` | `argon` | `q_2007_8` | Joining a piece with the given shape to form a solid rectangle |
+| `(2007, 10)` | `question-generator/2007-10.py` | `argon` | `q_2007_10` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
+| `(2007, 12)` | `question-generator/2007-12.py` | `argon` | `q_2007_12` | Calendar birthday date calculation given older/younger offset |
+| `(2007, 14)` | `question-generator/2007-14.py` | `argon` | `q_2007_14` | 3D cube aquarium (3×3×3) — counting 1 dm cubes inside / missing to fill |
+| `(2007, 17)` | `question-generator/2007-17.py` | `argon` | `q_2007_17` | Painted 3D cube cut into unit cubes — counting cubes with $k$ painted faces |
+| `(2007, 21)` | `question-generator/2007-21.py` | `argon` | `q_2007_21` | Growing grid pattern of black and white cells — counting white cells |
+| `(2007, 23)` | `question-generator/2007-23.py` | `argon` | `q_2007_23` | Total digits needed to write all numbers from $1$ to $N$ |
+| `(2007, 24)` | `question-generator/2007-24.py` | `argon` | `q_2007_24` | Square paper folded twice and cut at a corner — unfolded paper design |
 
-**Any other `(year, number)` requested by the user is NEW** — you must inspect the source PDF, implement
-a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True, num_practice=...)` function for it, and add it to both `QUESTIONS_INDEX.md` and the table above!
+**Any other `(year, number)` requested by the user is NEW** — you must inspect the source PDF, create
+a new dedicated `question-generator/<year>-<number>.py` file (including `# Model: <model>` and `MODEL = "<model>"`), and add it to both `QUESTIONS_INDEX.md` and the table above!
 
 ---
 
@@ -179,10 +190,11 @@ a new dedicated `q_<year>_<number>(d, key, set_num, include_orig=True, num_pract
    - Always write an `assert` / solver function that verifies the full math, combinatorics, and geometry of your question directly on the exact data structures passed to the figure renderer, and confirms that **strictly one** answer choice (`A`–`E`) is valid.
    - **Never write a weak proxy checker!** For example, in a 2D polyomino tiling/covering problem (`2003 #18`, `2007 #8`), checking only that the number of squares sums to the empty area (`5 + 6 == 11`) is a broken proxy check because the 2D shapes might not geometrically fit the region! Your solver must test actual 2D geometric placement (all translations/rotations/flips) directly on the grid matrix and polyomino cell coordinates. Similarly, for skyline/path matching (`2002 #7`), verify subpath matching on the actual token lists; for 3D nets (`2003 #12`, `2007 #24`), verify the 3D/unfolded adjacency directly.
 3. **Avoid trivial degeneracies in practice variations:** When designing new numbers for a trick problem (e.g., odometer rollover `2002 #24`), make sure the variation preserves the core reasoning step of the original problem (e.g., requiring a digit rollover rather than a trivial `+1 km` step).
-3. **Check figure scale and layout visually:** Always render output PDF pages to PNGs in `scratch/` and inspect them with `view_file`.
-4. **Answer key is ALWAYS on the last page of the PDF:** Never generate a separate answer key PDF file. Always
+4. **Always record the model name in `question-generator/<year>-<num>.py`:** Every generator file in `question-generator/` must start with `# Model: <model-name>` and define `MODEL = "<model-name>"` (e.g., `MODEL = "argon"`). Never omit `MODEL`.
+5. **Check figure scale and layout visually:** Always render output PDF pages to PNGs in `scratch/` and inspect them with `view_file`.
+6. **Answer key is ALWAYS on the last page of the PDF:** Never generate a separate answer key PDF file. Always
    append the answer key starting on a fresh new page at the very end of the worksheet PDF.
-5. **Always create a new timestamped file in `generated/`:** Never amend or overwrite previous worksheet PDFs. Every time questions are requested,
+7. **Always create a new timestamped file in `generated/`:** Never amend or overwrite previous worksheet PDFs. Every time questions are requested,
    generate a fresh PDF inside `generated/` named with the current timestamp `generated/YYYY-MM-DD-HH-MM-SS.pdf` to keep the root clean.
-6. **Support `include_orig=False` (`--no-include-orig`) and `--num-practice`:** When the user sets `Include original problems: no`, pass `--no-include-orig`. Every `q_<year>_<num>` method must support `include_orig=True` and omit the contest problem from both the worksheet and the answer key when `include_orig=False`.
-7. **Always keep `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md` updated, and commit & push:** Whenever you implement a new question, immediately update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md`, then `git add`, `git commit`, and `git push`.
+8. **Support `include_orig=False` (`--no-include-orig`) and `--num-practice`:** When the user sets `Include original problems: no`, pass `--no-include-orig`. Every `q_<year>_<num>` method must support `include_orig=True` and omit the contest problem from both the worksheet and the answer key when `include_orig=False`.
+9. **Always keep `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md` updated, and commit & push:** Whenever you implement a new question in `question-generator/<year>-<num>.py`, immediately update `QUESTIONS_INDEX.md` and `AGENT_GUIDE.md`, then `git add`, `git commit`, and `git push`.
