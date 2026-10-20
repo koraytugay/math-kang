@@ -154,7 +154,7 @@ The following 33 question generators are currently implemented in `question-gene
 | `(2002, 18)` | `question-generator/2002-18.py` | `argon` (reviewed high effort, dynamic) | `q_2002_18` | Pet/item logic deduction — 1-to-1 matching of 4 people and 4 pets/items |
 | `(2002, 20)` | `question-generator/2002-20.py` | `argon` (reviewed high effort, dynamic) | `q_2002_20` | 3D cube tunnel rearranged into a stepped pyramid — counting unused cubes |
 | `(2002, 21)` | `question-generator/2002-21.py` | `argon` (reviewed high effort, dynamic) | `q_2002_21` | Three digit cards & four basic operations — reaching a target number |
-| `(2002, 22)` | `question-generator/2002-22.py` | `argon` | `q_2002_22` | Seating permutations around a table/row with fixed seats |
+| `(2002, 22)` | `question-generator/2002-22.py` | `argon` (reviewed high effort, dynamic) | `q_2002_22` | Seating permutations around a table/row with fixed seats |
 | `(2002, 24)` | `question-generator/2002-24.py` | `argon` | `q_2002_24` | Odometer distance until all digits are distinct again |
 | `(2003, 9)` | `question-generator/2003-9.py` | `argon` | `q_2003_9` | 3D W×H×D brick of cubes (red outside, blue inside) |
 | `(2003, 10)` | `question-generator/2003-10.py` | `argon` | `q_2003_10` | Metric length conversion and addition (`m`, `dm`, `cm`, `mm`) |
