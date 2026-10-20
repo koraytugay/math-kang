@@ -37,7 +37,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 | **2002 #20** | `2002:20` | `question-generator/2002-20.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **3D Cube Tunnel to Pyramid** — Counting unit cubes in a 3D tunnel vs. a stepped pyramid |
 | **2002 #21** | `2002:21` | `question-generator/2002-21.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Three Digit Cards & Four Operations** — Determining who cannot reach a target number using 3 cards once |
 | **2002 #22** | `2002:22` | `question-generator/2002-22.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Seating Permutations with Fixed Spots** — Counting seating arrangements when some seats are fixed |
-| **2002 #24** | `2002:24` | `question-generator/2002-24.py` | `argon` | 4 | **Odometer with Distinct Digits** — Finding distance until all digits on an odometer are distinct again |
+| **2002 #24** | `2002:24` | `question-generator/2002-24.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Odometer with Distinct Digits** — Finding distance until all digits on an odometer are distinct again |
 
 ---
 
