@@ -142,7 +142,7 @@ The following 33 question generators are currently implemented in `question-gene
 
 | Question ID | Generator File | Model | Function | Description |
 |---|---|---|---|---|
-| `(2002, 1)` | `question-generator/2002-1.py` | `argon` | `q_2002_1` | Grid puzzle / picture tile — finding the missing square tile |
+| `(2002, 1)` | `question-generator/2002-1.py` | `argon` (reviewed high effort, dynamic) | `q_2002_1` | Grid puzzle / picture tile — finding the missing square tile |
 | `(2002, 4)` | `question-generator/2002-4.py` | `argon` | `q_2002_4` | 4×4 / 5×5 square cut along grid lines into polyomino pieces |
 | `(2002, 6)` | `question-generator/2002-6.py` | `argon` | `q_2002_6` | Square and rectangle perimeters (perimeter difference) |
 | `(2002, 7)` | `question-generator/2002-7.py` | `argon` | `q_2002_7` | Castle skyline contour — which piece cannot belong |

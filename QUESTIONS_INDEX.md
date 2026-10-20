@@ -24,7 +24,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 
 | Question | CLI ID | Generator File | Model | Practice Variations | Topic & Visual Description |
 |---|---|---|---|---|---|
-| **2002 #1** | `2002:1` | `question-generator/2002-1.py` | `argon` (reviewed high effort) | 4 | **Missing Puzzle Tile** — Finding the missing square tile from a grid drawing |
+| **2002 #1** | `2002:1` | `question-generator/2002-1.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Missing Puzzle Tile** — Finding the missing square tile from a grid drawing |
 | **2002 #4** | `2002:4` | `question-generator/2002-4.py` | `argon` | 3 | **Cutting a Square into Polyominoes** — Identifying which piece was not obtained |
 | **2002 #6** | `2002:6` | `question-generator/2002-6.py` | `argon` | 3 | **Square & Rectangle Perimeters** — Comparing perimeter of square $ABCD$ and rectangle $AMTD$ |
 | **2002 #7** | `2002:7` | `question-generator/2002-7.py` | `argon` | 3 | **Castle Skyline Contour** — Matching contour segments to a castle silhouette |

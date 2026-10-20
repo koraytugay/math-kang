@@ -1,9 +1,10 @@
 # Model: argon
-# Reviewed by argon on high effort
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2002, Problem #1 - Question Generator."""
 import os
 import sys
 import math
+import random
 import itertools
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +31,7 @@ from common import (
 
 MODEL = "argon"
 REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2002, 1)
 
 
@@ -162,7 +164,6 @@ def check_missing_tile_geometry(n_rows, n_cols, cell_strokes, missing_rc, opt_st
         if (r, c) != missing_rc
     }
 
-    # 1. Verify internal grid continuity across all adjacent non-missing tiles
     for r in range(n_rows):
         for c in range(n_cols):
             if (r, c) == missing_rc:
@@ -178,7 +179,6 @@ def check_missing_tile_geometry(n_rows, n_cols, cell_strokes, missing_rc, opt_st
                     f"and {(r, c + 1)} left={sigs[(r, c + 1)]['left']}"
                 )
 
-    # 2. Compute required boundary signature for missing_rc from its neighbors
     mr, mc = missing_rc
     req = {}
     if mr > 0:
@@ -202,144 +202,259 @@ def check_missing_tile_geometry(n_rows, n_cols, cell_strokes, missing_rc, opt_st
 
 
 def _rot90_cw(strokes):
-    """Rotate tile strokes 90 degrees clockwise: (x, y) -> (y, 1 - x)."""
-    out = []
-    for kind, pts in strokes:
-        out.append((kind, tuple((round(y, 2), round(1.0 - x, 2)) for x, y in pts)))
-    return out
+    return [(kind, tuple((round(y, 2), round(1.0 - x, 2)) for x, y in pts)) for kind, pts in strokes]
 
 
 def _rot90_ccw(strokes):
-    """Rotate tile strokes 90 degrees counter-clockwise: (x, y) -> (1 - y, x)."""
-    out = []
-    for kind, pts in strokes:
-        out.append((kind, tuple((round(1.0 - y, 2), round(x, 2)) for x, y in pts)))
-    return out
+    return [(kind, tuple((round(1.0 - y, 2), round(x, 2)) for x, y in pts)) for kind, pts in strokes]
 
 
 def _rot180(strokes):
-    """Rotate tile strokes 180 degrees: (x, y) -> (1 - x, 1 - y)."""
-    out = []
-    for kind, pts in strokes:
-        out.append((kind, tuple((round(1.0 - x, 2), round(1.0 - y, 2)) for x, y in pts)))
-    return out
+    return [(kind, tuple((round(1.0 - x, 2), round(1.0 - y, 2)) for x, y in pts)) for kind, pts in strokes]
 
 
 def _flip_h(strokes):
-    """Flip tile strokes horizontally: (x, y) -> (1 - x, y)."""
-    out = []
-    for kind, pts in strokes:
-        out.append((kind, tuple((round(1.0 - x, 2), round(y, 2)) for x, y in pts)))
-    return out
+    return [(kind, tuple((round(1.0 - x, 2), round(y, 2)) for x, y in pts)) for kind, pts in strokes]
 
 
 def _flip_v(strokes):
-    """Flip tile strokes vertically: (x, y) -> (x, 1 - y)."""
-    out = []
-    for kind, pts in strokes:
-        out.append((kind, tuple((round(x, 2), round(1.0 - y, 2)) for x, y in pts)))
-    return out
+    return [(kind, tuple((round(x, 2), round(1.0 - y, 2)) for x, y in pts)) for kind, pts in strokes]
 
 
-def _transform_grid_and_options(nr, nc, grid, miss_rc, opt_strokes, ans_idx, sym, perm, rng):
-    """Apply a dihedral symmetry (id, flip_h, flip_v, rot180) to the entire grid and tile options,
-    and permute the 5 options so each generated problem is genuinely fresh while preserving geometry.
-    """
-    mr, mc = miss_rc
-    if sym == "id":
-        new_miss = (mr, mc)
-        t_fn = lambda s: s
-        r_map = lambda r, c: (r, c)
-    elif sym == "flip_h":
-        new_miss = (mr, nc - 1 - mc)
-        t_fn = _flip_h
-        r_map = lambda r, c: (r, nc - 1 - c)
-    elif sym == "flip_v":
-        new_miss = (nr - 1 - mr, mc)
-        t_fn = _flip_v
-        r_map = lambda r, c: (nr - 1 - r, c)
-    elif sym == "rot180":
-        new_miss = (nr - 1 - mr, nc - 1 - mc)
-        t_fn = _rot180
-        r_map = lambda r, c: (nr - 1 - r, nc - 1 - c)
+def _make_smooth_connector(p1, p2, use_curve=True):
+    """Connect two boundary points p1=(x1,y1) and p2=(x2,y2) smoothly inside [0,1]^2."""
+    x1, y1 = p1
+    x2, y2 = p2
+    if not use_curve:
+        return ("line", ((round(x1, 2), round(y1, 2)), (round(x2, 2), round(y2, 2))))
+    # Inward tangent control points
+    def inward(x, y):
+        dx, dy = 0.0, 0.0
+        if abs(x - 0.0) < 1e-3:
+            dx = 0.32
+        elif abs(x - 1.0) < 1e-3:
+            dx = -0.32
+        if abs(y - 0.0) < 1e-3:
+            dy = 0.32
+        elif abs(y - 1.0) < 1e-3:
+            dy = -0.32
+        return (round(min(0.92, max(0.08, x + dx)), 2), round(min(0.92, max(0.08, y + dy)), 2))
+
+    c1 = inward(x1, y1)
+    c2 = inward(x2, y2)
+    return ("curve", ((round(x1, 2), round(y1, 2)), c1, c2, (round(x2, 2), round(y2, 2))))
+
+
+def _generate_dynamic_sailboat(rng):
+    """Procedurally generate a parameterized sailboat on waves (3x3 grid, missing (1, 1))."""
+    mast_x = rng.choice([0.45, 0.50, 0.55])
+    jib_top = rng.choice([0.18, 0.22, 0.26])
+    main_top = rng.choice([0.78, 0.82, 0.86])
+    jib_left_y = rng.choice([0.34, 0.38, 0.42])
+    main_right_y = rng.choice([0.22, 0.26, 0.30])
+    jib_top_left_y = rng.choice([0.76, 0.82, 0.86])
+    main_top_right_y = rng.choice([0.68, 0.72, 0.78])
+
+    if rng.random() < 0.5:
+        # Swap left and right sail heights for variety
+        jib_left_y, main_right_y = main_right_y, jib_left_y
+        jib_top_left_y, main_top_right_y = main_top_right_y, jib_top_left_y
+
+    grid = {
+        (0, 1): [
+            ("line", ((mast_x, 0.0), (mast_x, 0.90))),
+            ("poly", ((mast_x, 0.90), (round(mast_x + 0.22, 2), 0.82), (mast_x, 0.74))),
+            ("line", ((mast_x, 0.72), (jib_top, 0.0))),
+            ("line", ((mast_x, 0.86), (main_top, 0.0))),
+        ],
+        (1, 0): [
+            ("poly", ((1.0, jib_left_y), (0.62, jib_left_y), (1.0, jib_top_left_y))),
+        ],
+        (1, 2): [
+            ("poly", ((0.0, main_right_y), (0.42, main_right_y), (0.0, main_top_right_y))),
+        ],
+        (2, 0): [
+            ("poly", ((1.0, 0.75), (0.35, 0.75), (0.65, 0.30), (1.0, 0.30))),
+            ("curve", ((0.10, 0.15), (0.40, 0.28), (0.70, 0.02), (1.0, 0.15))),
+        ],
+        (2, 1): [
+            ("line", ((mast_x, 1.0), (mast_x, 0.75))),
+            ("line", ((0.0, 0.75), (1.0, 0.75))),
+            ("line", ((0.0, 0.30), (1.0, 0.30))),
+            ("curve", ((0.0, 0.15), (0.35, 0.28), (0.65, 0.02), (1.0, 0.15))),
+        ],
+        (2, 2): [
+            ("poly", ((0.0, 0.75), (0.65, 0.75), (0.40, 0.30), (0.0, 0.30))),
+            ("curve", ((0.0, 0.15), (0.35, 0.28), (0.65, 0.02), (0.90, 0.15))),
+        ],
+    }
+    true_tile = [
+        ("line", ((mast_x, 1.0), (mast_x, 0.0))),
+        ("line", ((jib_top, 1.0), (0.0, jib_top_left_y))),
+        ("line", ((0.0, jib_left_y), (mast_x, jib_left_y))),
+        ("line", ((main_top, 1.0), (1.0, main_top_right_y))),
+        ("line", ((mast_x, main_right_y), (1.0, main_right_y))),
+    ]
+    no_booms_distractor = [
+        ("line", ((mast_x, 1.0), (mast_x, 0.0))),
+        ("line", ((jib_top, 1.0), (0.0, jib_left_y))),
+        ("line", ((main_top, 1.0), (1.0, main_right_y))),
+    ]
+    distractors = [
+        _rot90_cw(true_tile),
+        _flip_h(true_tile),
+        _rot180(true_tile),
+        no_booms_distractor,
+    ]
+    opts = [true_tile] + distractors
+    idxs = list(range(5))
+    rng.shuffle(idxs)
+    shuffled_opts = [opts[i] for i in idxs]
+    ans_idx = idxs.index(0)
+    ans_letter = LETTERS[ans_idx]
+    text = "Which of the squares below is missing from the picture of the sailboat?"
+    expl = (
+        f"In the missing center square, the vertical mast runs from the top ({mast_x:.2f}) to the bottom ({mast_x:.2f}), "
+        f"the two upper sail edges enter from the top at {jib_top:.2f} and {main_top:.2f}, and the horizontal sail booms "
+        f"sit at heights {jib_left_y:.2f} (left) and {main_right_y:.2f} (right). Only square {ans_letter} matches all four edges."
+    )
+    return 3, 3, grid, (1, 1), shuffled_opts, ans_idx, text, expl
+
+
+def _generate_dynamic_network_puzzle(rng, theme="tracks"):
+    """Procedurally generate a continuous multi-cell network puzzle with randomized coordinates & missing cell."""
+    n_rows, n_cols = rng.choice([(3, 3), (3, 4)])
+    # Choose missing cell (row 1, col 1 or col 2)
+    missing_rc = (1, rng.choice([1, n_cols - 2]))
+    mr, mc = missing_rc
+
+    # Pick distinct asymmetric coordinates on the 4 edges of missing_rc
+    pool_low = [0.20, 0.25, 0.30, 0.35]
+    pool_high = [0.65, 0.70, 0.75, 0.80]
+    t1, t2 = rng.choice(pool_low), rng.choice(pool_high)
+    l1, l2 = rng.choice([x for x in pool_low if x != t1]), rng.choice([x for x in pool_high if x != t2])
+    b1 = rng.choice([0.38, 0.42, 0.58, 0.62])
+    r1 = rng.choice([x for x in [0.28, 0.32, 0.52, 0.68] if x != b1])
+
+    use_curve = theme in ("tracks", "paths")
+
+    # Build true tile for (mr, mc): connects (left=l2 -> top=t1), (left=l1 -> bot=b1), (top=t2 -> right=r1)
+    true_tile = [
+        _make_smooth_connector((0.0, l2), (t1, 1.0), use_curve=use_curve),
+        _make_smooth_connector((0.0, l1), (b1, 0.0), use_curve=use_curve),
+        _make_smooth_connector((t2, 1.0), (1.0, r1), use_curve=use_curve),
+    ]
+
+    # Build continuous neighboring tiles around (mr, mc) so every internal edge matches 100%
+    mid_r = rng.choice([0.45, 0.55])
+    bot_r = rng.choice([0.30, 0.40])
+    grid = {
+        # Top neighbor (mr - 1, mc): bot must be [t1, t2], right is [mid_r]
+        (mr - 1, mc): [
+            _make_smooth_connector((t1, 0.0), (1.0, mid_r), use_curve=use_curve),
+            _make_smooth_connector((t2, 0.0), (1.0, round(mid_r - 0.20, 2)), use_curve=use_curve),
+        ],
+        # Top-right neighbor (mr - 1, mc + 1): left is [mid_r - 0.20, mid_r], bot is [0.65]
+        (mr - 1, mc + 1): [
+            _make_smooth_connector((0.0, mid_r), (0.65, 0.0), use_curve=use_curve),
+            _make_smooth_connector((0.0, round(mid_r - 0.20, 2)), (0.30, 0.0), use_curve=use_curve),
+        ],
+        # Left neighbor (mr, mc - 1): right must be [l1, l2], no other internal crossings
+        (mr, mc - 1): [
+            ("curve", ((1.0, l2), (0.30, l2), (0.30, l1), (1.0, l1)))
+            if use_curve
+            else ("poly", ((1.0, l2), (0.30, 0.50), (1.0, l1))),
+        ],
+        # Right neighbor (mr, mc + 1): left must be [r1], top is [0.30, 0.65], bot is [0.65]
+        (mr, mc + 1): [
+            _make_smooth_connector((0.30, 1.0), (0.0, r1), use_curve=use_curve),
+            ("line", ((0.65, 1.0), (0.65, 0.0))),
+        ],
+        # Bottom neighbor (mr + 1, mc): top must be [b1], right is [bot_r]
+        (mr + 1, mc): [
+            _make_smooth_connector((b1, 1.0), (1.0, bot_r), use_curve=use_curve),
+        ],
+        # Bottom-right neighbor (mr + 1, mc + 1): left is [bot_r], top is [0.65]
+        (mr + 1, mc + 1): [
+            _make_smooth_connector((0.0, bot_r), (0.65, 1.0), use_curve=use_curve),
+        ],
+    }
+
+    distractors = [
+        _rot90_cw(true_tile),
+        _rot90_ccw(true_tile),
+        _rot180(true_tile),
+        _flip_h(true_tile),
+    ]
+    opts = [true_tile] + distractors
+    idxs = list(range(5))
+    rng.shuffle(idxs)
+    shuffled_opts = [opts[i] for i in idxs]
+    ans_idx = idxs.index(0)
+    ans_letter = LETTERS[ans_idx]
+
+    if theme == "tracks":
+        text = (
+            f"A model train track loops across the {n_rows} × {n_cols} board below. "
+            "Which tile (A through E) belongs in the missing square marked with a question mark (?) "
+            "to make the track continuous?"
+        )
+    elif theme == "paths":
+        text = (
+            f"Park paths wind across the {n_rows} × {n_cols} map below, and one square tile has been removed. "
+            "Which of the tiles (A through E) belongs in the square marked with a question mark (?)?"
+        )
     else:
-        raise ValueError(f"Unknown symmetry: {sym}")
+        text = (
+            f"One square tile is missing from the {n_rows} × {n_cols} geometric line pattern below. "
+            "Which tile (A through E) fits in the empty square marked with a question mark (?)?"
+        )
 
-    new_grid = {r_map(r, c): t_fn(strokes) for (r, c), strokes in grid.items()}
-    transformed_opts = [t_fn(s) for s in opt_strokes]
-    new_opts = [transformed_opts[i] for i in perm]
-    new_ans_idx = perm.index(ans_idx)
-    return nr, nc, new_grid, new_miss, new_opts, new_ans_idx
+    expl = (
+        f"Checking the four edges of the missing square (?): two lines enter from the top (at {t1:.2f} and {t2:.2f}), "
+        f"two enter from the left (at {l1:.2f} and {l2:.2f}), one exits through the bottom (at {b1:.2f}), and one exits "
+        f"through the right (at {r1:.2f}). Only tile {ans_letter} connects all six boundary points in the proper orientation."
+    )
+    return n_rows, n_cols, grid, missing_rc, shuffled_opts, ans_idx, text, expl
 
 
-def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
+def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Missing puzzle tile", "Based on 2002, Problem 1")
 
-    # ------------------------------------------------------------------
-    # Original 2002 #1: 3x4 grid drawing of a Kangaroo, missing tile (1, 3).
-    # In 2002.pdf:
-    # - Cell (0, 3) has the kangaroo's head & ears; two neck lines touch bot at x=0.22 and x=0.48.
-    # - Cell (1, 2) has the kangaroo's arched back touching right at y=0.88, and lower back touching left at y=0.72.
-    # - Cell (1, 1) has the kangaroo's lower back from (0.40, 0.0) to (1.0, 0.72), and tail base from (0.15, 0.0) to (1.0, 0.15).
-    # - Cell (2, 0) and (2, 1) have the kangaroo's long curved tail.
-    # - Cell (2, 2) has the kangaroo's tucked front paw, chest (meeting top-right at (1.0, 0.08) of (1,3)), and hind leg.
-    # - Cell (2, 3) has the front tip of the kangaroo's long hind foot (entering from left at y=0.06 and y=0.20, no lines on top).
-    # Missing tile (1, 3) has:
-    #   1) Short upper-neck bridge from left (0.0, 0.88) -> (0.22, 0.88) -> top (0.22, 1.0)
-    #   2) Throat/chest curve from top (0.48, 1.0) -> down-left to (0.0, 0.08)
-    # Answer in 2002.pdf is B!
+    # Original 2002 #1: 3x4 grid drawing of a Kangaroo, missing tile (1, 3) -> Answer: B
     grid0 = {
         (0, 3): [
-            # Kangaroo head, two ears at top-left, snout pointing right, neck meeting bottom at x=0.22 and x=0.48
             ("poly", ((0.22, 0.0), (0.26, 0.22), (0.14, 0.42), (0.08, 0.90), (0.16, 0.78),
                       (0.24, 0.92), (0.42, 0.56), (0.76, 0.32), (0.62, 0.10), (0.48, 0.0))),
         ],
         (1, 2): [
-            # Kangaroo upper back from (0.0, 0.72) arching to (1.0, 0.88)
             ("curve", ((0.0, 0.72), (0.35, 0.95), (0.70, 0.95), (1.0, 0.88))),
-            # Belly/hip line at bottom-left from (0.0, 0.15) to (0.05, 0.0)
             ("curve", ((0.0, 0.15), (0.04, 0.12), (0.05, 0.06), (0.05, 0.0))),
         ],
         (1, 1): [
-            # Back from (0.15, 0.0) up-right to (1.0, 0.72)
             ("curve", ((0.15, 0.0), (0.42, 0.28), (0.72, 0.54), (1.0, 0.72))),
-            # Tail underside / hip curve from (0.45, 0.0) to (1.0, 0.15)
             ("curve", ((0.45, 0.0), (0.65, 0.15), (0.85, 0.20), (1.0, 0.15))),
         ],
         (2, 0): [
-            # Tip of tail curving up and back to right edge (1.0, 0.48) and (1.0, 0.30)
             ("curve", ((1.0, 0.48), (0.72, 0.34), (0.55, 0.38), (0.50, 0.55))),
             ("curve", ((0.50, 0.55), (0.45, 0.30), (0.68, 0.22), (1.0, 0.30))),
         ],
         (2, 1): [
-            # Middle of tail connecting (2, 0) to (1, 1) and (2, 2)
             ("curve", ((0.0, 0.48), (0.06, 0.68), (0.11, 0.85), (0.15, 1.0))),
             ("curve", ((0.0, 0.30), (0.20, 0.55), (0.35, 0.80), (0.45, 1.0))),
-            # Hind leg loop sticking slightly into right side of (2, 1)
             ("curve", ((1.0, 0.55), (0.82, 0.32), (0.82, 0.14), (1.0, 0.10))),
         ],
         (2, 2): [
-            # Hip entering from top (0.05, 1.0) down to (0.0, 0.55)
             ("curve", ((0.05, 1.0), (0.08, 0.80), (0.05, 0.65), (0.0, 0.55))),
-            # Bottom of foot from (0.0, 0.10) across to (1.0, 0.06)
             ("line", ((0.0, 0.10), (1.0, 0.06))),
-            # Chest + tucked front paw + top of hind foot: starts at (1.0, 0.92)? Wait: chest meets (1, 3) at (0.0, 0.08) of (1, 3)!
-            # Instead of crossing inside (1, 3), in (2, 2) the chest line starts at top-right (1.0, 1.0) or in (1, 2) right at (1.0, 0.08):
             ("poly", ((1.0, 0.95), (0.72, 0.62), (0.58, 0.62), (0.66, 0.78), (0.55, 0.82),
                       (0.35, 0.58), (0.24, 0.32), (0.42, 0.22), (1.0, 0.18))),
         ],
         (2, 3): [
-            # Tip of kangaroo's long foot
             ("curve", ((0.0, 0.18), (0.32, 0.15), (0.38, 0.08), (0.0, 0.06))),
-            # Notice: (2, 2) has (1.0, 0.95), which connects to (2, 3) at (0.0, 0.95) curving up to (0.08, 1.0)!
             ("curve", ((0.0, 0.95), (0.04, 0.97), (0.06, 0.98), (0.08, 1.0))),
         ],
     }
-    # Correct tile B for (1, 3):
-    # - top: [0.22, 0.48] (matches (0, 3) bot)
-    # - left: [0.88] (matches (1, 2) right)
-    # - bot: [0.08] (matches (2, 3) top)
-    # - right: []
     tile0_B = [
         ("poly", ((0.0, 0.88), (0.20, 0.88), (0.22, 1.0))),
         ("curve", ((0.48, 1.0), (0.44, 0.62), (0.28, 0.32), (0.08, 0.0))),
@@ -373,515 +488,18 @@ def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
             "at the bottom-left. Only square B matches all of these connections in the right orientation.",
         ))
 
-    # ------------------------------------------------------------------
-    # Practice variations (4 rich multi-stroke grid drawings, all verified by check_missing_tile_geometry)
-    practices = []
-
-    # Practice .1: Sailboat on the waves (3x3 grid, missing center tile (1, 1) -> Answer: C)
-    # Center tile (1, 1) has:
-    # - Mast going straight from top (0.50, 1.0) to bot (0.50, 0.0)
-    # - Left jib sail edge from top (0.20, 1.0) to left (0.0, 0.35), and boom from (0.0, 0.35) to (0.50, 0.35)
-    # - Right mainsail edge from top (0.85, 1.0) to right (1.0, 0.25), and boom from (0.50, 0.25) to (1.0, 0.25)
-    grid1 = {
-        (0, 1): [
-            # Top of mast + flag + top of left and right sails
-            ("line", ((0.50, 0.0), (0.50, 0.90))),
-            ("poly", ((0.50, 0.90), (0.72, 0.82), (0.50, 0.74))),
-            ("line", ((0.50, 0.70), (0.20, 0.0))),
-            ("line", ((0.50, 0.85), (0.85, 0.0))),
-        ],
-        (1, 0): [
-            # Left tip of jib sail inside (1, 0)
-            ("poly", ((1.0, 0.35), (0.65, 0.35), (1.0, 0.82))),
-        ],
-        (0, 0): [
-            ("line", ((1.0, 0.0), (1.0, 0.0))),  # empty sky; wait: (1, 0) has (1.0, 0.82) on right edge, not top!
-        ],
-        (1, 2): [
-            # Right tip of mainsail inside (1, 2)
-            ("poly", ((0.0, 0.25), (0.45, 0.25), (0.0, 0.75))),
-        ],
-        (2, 0): [
-            # Left bow of boat hull + wave
-            ("poly", ((1.0, 0.75), (0.35, 0.75), (0.65, 0.30), (1.0, 0.30))),
-            ("curve", ((0.10, 0.15), (0.40, 0.28), (0.70, 0.02), (1.0, 0.15))),
-        ],
-        (2, 1): [
-            # Middle of hull + mast base at (0.50, 1.0)
-            ("line", ((0.50, 1.0), (0.50, 0.75))),
-            ("line", ((0.0, 0.75), (1.0, 0.75))),
-            ("line", ((0.0, 0.30), (1.0, 0.30))),
-            ("curve", ((0.0, 0.15), (0.35, 0.28), (0.65, 0.02), (1.0, 0.15))),
-        ],
-        (2, 2): [
-            # Right stern of hull + wave
-            ("poly", ((0.0, 0.75), (0.65, 0.75), (0.40, 0.30), (0.0, 0.30))),
-            ("curve", ((0.0, 0.15), (0.35, 0.28), (0.65, 0.02), (0.90, 0.15))),
-        ],
-    }
-    # Clean up (0, 0) and reconcile (1, 0)/(1, 2) with (1, 1):
-    del grid1[(0, 0)]
-    tile1_C = [
-        ("line", ((0.50, 1.0), (0.50, 0.0))),
-        ("line", ((0.20, 1.0), (0.0, 0.82))),
-        ("line", ((0.0, 0.35), (0.50, 0.35))),
-        ("line", ((0.85, 1.0), (1.0, 0.75))),
-        ("line", ((0.50, 0.25), (1.0, 0.25))),
-    ]
-    opt1_strokes = [
-        _rot90_cw(tile1_C),
-        _flip_h(tile1_C),
-        tile1_C,
-        _rot180(tile1_C),
-        [
-            ("line", ((0.50, 1.0), (0.50, 0.0))),
-            ("line", ((0.20, 1.0), (0.0, 0.35))),
-            ("line", ((0.85, 1.0), (1.0, 0.25))),
-        ],
-    ]
-    practices.append((
-        3, 3, grid1, (1, 1), opt1_strokes, 2,
-        "Which of the squares below is missing from the picture of the sailboat?",
-        "In the center square, the vertical mast runs straight from the top center (0.50) to the bottom center (0.50), "
-        "the left jib sail is higher than the right mainsail, and both horizontal booms meet the mast. Only square C "
-        "matches all four edges of the missing center square.",
-    ))
-
-    # Practice .2: Winding double park trail (3x4 grid, missing tile (1, 2) -> Answer: D)
-    # In (1, 2):
-    # - top: [0.35, 0.75]
-    # - left: [0.25, 0.70]
-    # - bot: [0.45]
-    # - right: [0.30]
-    grid2 = {
-        (0, 1): [
-            ("curve", ((1.0, 0.55), (0.45, 0.55), (0.35, 0.30), (0.35, 0.0))),
-        ],
-        (0, 2): [
-            ("curve", ((0.0, 0.55), (0.25, 0.55), (0.35, 0.30), (0.35, 0.0))),
-            ("curve", ((0.75, 0.0), (0.75, 0.45), (0.85, 0.65), (1.0, 0.65))),
-        ],
-        (0, 3): [
-            ("curve", ((0.0, 0.65), (0.50, 0.65), (0.65, 0.40), (0.65, 0.0))),
-        ],
-        (1, 0): [
-            ("curve", ((1.0, 0.70), (0.40, 0.70), (0.30, 0.45), (0.30, 0.0))),
-            ("curve", ((1.0, 0.25), (0.65, 0.25), (0.60, 0.15), (0.60, 0.0))),
-        ],
-        (1, 1): [
-            ("curve", ((0.35, 1.0), (0.35, 0.75), (0.60, 0.70), (1.0, 0.70))),
-            ("line", ((0.0, 0.70), (0.35, 0.25))),
-            ("line", ((0.35, 0.25), (1.0, 0.25))),
-            ("curve", ((0.0, 0.25), (0.20, 0.25), (0.30, 0.12), (0.30, 0.0))),
-        ],
-        (1, 3): [
-            ("curve", ((0.65, 1.0), (0.65, 0.50), (0.35, 0.30), (0.0, 0.30))),
-        ],
-        (2, 0): [
-            ("curve", ((0.30, 1.0), (0.30, 0.40), (0.60, 0.30), (1.0, 0.30))),
-            ("curve", ((0.60, 1.0), (0.60, 0.65), (0.80, 0.60), (1.0, 0.60))),
-        ],
-        (2, 1): [
-            ("curve", ((0.30, 1.0), (0.30, 0.70), (0.15, 0.60), (0.0, 0.60))),
-            ("line", ((0.0, 0.30), (1.0, 0.30))),
-        ],
-        (2, 2): [
-            ("curve", ((0.0, 0.30), (0.35, 0.30), (0.45, 0.60), (0.45, 1.0))),
-        ],
-    }
-    tile2_D = [
-        ("curve", ((0.0, 0.70), (0.25, 0.70), (0.35, 0.85), (0.35, 1.0))),
-        ("curve", ((0.75, 1.0), (0.75, 0.55), (0.85, 0.30), (1.0, 0.30))),
-        ("curve", ((0.0, 0.25), (0.30, 0.25), (0.45, 0.15), (0.45, 0.0))),
-    ]
-    opt2_strokes = [
-        _rot90_cw(tile2_D),
-        _rot180(tile2_D),
-        _flip_h(tile2_D),
-        tile2_D,
-        _rot90_ccw(tile2_D),
-    ]
-    practices.append((
-        3, 4, grid2, (1, 2), opt2_strokes, 3,
-        "Park paths wind across the 3 × 4 map below, and one square tile has been removed. "
-        "Which of the tiles (A through E) belongs in the square marked with a question mark (?)?",
-        "Checking the four edges of the missing square: two paths enter from the top (at 0.35 and 0.75), "
-        "two enter from the left (at 0.25 and 0.70), one exits through the bottom (at 0.45), and one exits "
-        "through the right (at 0.30). Only tile D connects all six boundary points properly.",
-    ))
-
-    # Practice .3: Geometric Kite & Star Mosaic (3x3 grid, missing right-middle tile (1, 2) -> Answer: A)
-    # In (1, 2):
-    # - top: [0.35, 0.75]
-    # - left: [0.25, 0.75]
-    # - bot: [0.55]
-    # - right: []
-    grid3 = {
-        (0, 1): [
-            ("line", ((1.0, 0.35), (0.35, 0.0))),
-            ("line", ((1.0, 0.75), (0.75, 0.0))),
-        ],
-        (0, 2): [
-            ("line", ((0.0, 0.35), (0.35, 0.0))),
-            ("poly", ((0.0, 0.75), (0.75, 0.75), (0.75, 0.0))),
-        ],
-        (1, 0): [
-            ("poly", ((1.0, 0.75), (0.25, 0.50), (1.0, 0.25))),
-        ],
-        (1, 1): [
-            ("line", ((0.35, 1.0), (0.35, 0.0))),
-            ("line", ((0.75, 1.0), (0.75, 0.0))),
-            ("line", ((0.0, 0.75), (1.0, 0.75))),
-            ("line", ((0.0, 0.25), (1.0, 0.25))),
-        ],
-        (2, 1): [
-            ("line", ((0.35, 1.0), (1.0, 0.65))),
-            ("line", ((0.75, 1.0), (1.0, 0.25))),
-        ],
-        (2, 2): [
-            ("poly", ((0.0, 0.65), (0.55, 0.65), (0.55, 1.0))),
-            ("poly", ((0.0, 0.25), (0.55, 0.25), (0.55, 0.65))),
-        ],
-    }
-    tile3_A = [
-        ("line", ((0.0, 0.75), (0.35, 1.0))),
-        ("poly", ((0.75, 1.0), (0.75, 0.25), (0.0, 0.25))),
-        ("line", ((0.55, 0.0), (0.55, 0.25))),
-    ]
-    opt3_strokes = [
-        tile3_A,
-        _rot90_cw(tile3_A),
-        _flip_h(tile3_A),
-        _rot180(tile3_A),
-        _rot90_ccw(tile3_A),
-    ]
-    practices.append((
-        3, 3, grid3, (1, 2), opt3_strokes, 0,
-        "One square tile is missing from the geometric pattern below. Which tile (A through E) fits in the "
-        "empty square marked with a question mark (?)?",
-        "Looking at the neighbours of the missing square on the right: two vertical lines enter from the top "
-        "(at 0.35 and 0.75), two horizontal lines enter from the left (at 0.25 and 0.75), one vertical line "
-        "enters from the bottom (at 0.55), and nothing touches the outer right edge. Only tile A matches.",
-    ))
-
-    # Practice .4: Dual-loop railway switchyard (3x4 grid, missing tile (1, 1) -> Answer: E)
-    # In (1, 1):
-    # - top: [0.30, 0.75]
-    # - bot: [0.40]
-    # - left: [0.30, 0.70]
-    # - right: [0.55]
-    grid4 = {
-        (0, 1): [
-            ("curve", ((0.30, 0.0), (0.30, 0.65), (0.55, 0.75), (1.0, 0.75))),
-            ("curve", ((0.75, 0.0), (0.75, 0.30), (0.85, 0.35), (1.0, 0.35))),
-        ],
-        (0, 2): [
-            ("curve", ((0.0, 0.75), (0.60, 0.75), (0.70, 0.50), (0.70, 0.0))),
-            ("curve", ((0.0, 0.35), (0.25, 0.35), (0.30, 0.20), (0.30, 0.0))),
-        ],
-        (1, 0): [
-            ("curve", ((1.0, 0.70), (0.35, 0.70), (0.35, 0.30), (1.0, 0.30))),
-        ],
-        (1, 2): [
-            ("curve", ((0.30, 1.0), (0.30, 0.65), (0.15, 0.55), (0.0, 0.55))),
-            ("line", ((0.70, 1.0), (0.70, 0.0))),
-        ],
-        (2, 1): [
-            ("curve", ((0.40, 1.0), (0.40, 0.45), (0.65, 0.35), (1.0, 0.35))),
-        ],
-        (2, 2): [
-            ("curve", ((0.0, 0.35), (0.50, 0.35), (0.70, 0.55), (0.70, 1.0))),
-        ],
-    }
-    tile4_E = [
-        ("curve", ((0.0, 0.70), (0.20, 0.70), (0.30, 0.85), (0.30, 1.0))),
-        ("curve", ((0.0, 0.30), (0.30, 0.30), (0.40, 0.15), (0.40, 0.0))),
-        ("curve", ((0.75, 1.0), (0.75, 0.65), (0.85, 0.55), (1.0, 0.55))),
-    ]
-    opt4_strokes = [
-        _rot90_cw(tile4_E),
-        _flip_h(tile4_E),
-        _rot180(tile4_E),
-        _rot90_ccw(tile4_E),
-        tile4_E,
-    ]
-    practices.append((
-        3, 4, grid4, (1, 1), opt4_strokes, 4,
-        "A model train track loops across the 3 × 4 board below. Which tile (A through E) belongs in the "
-        "missing square marked with a question mark (?) to make the track continuous?",
-        "Tracing the tracks into the missing square: two tracks enter from the left (at 0.30 and 0.70), "
-        "two enter from the top (at 0.30 and 0.75), one exits at the bottom (0.40), and one exits at the right (0.55). "
-        "Only tile E connects every track without breaks.",
-    ))
-
-    # Practice .5: Garden Stone Wall & Archway (3x3 grid, missing center tile (1, 1) -> Answer: B)
-    # In (1, 1):
-    # - top: [0.25, 0.75]
-    # - bot: [0.35]
-    # - left: [0.60]
-    # - right: [0.20, 0.80]
-    grid5 = {
-        (0, 1): [
-            ("curve", ((0.25, 0.0), (0.25, 0.65), (0.75, 0.65), (0.75, 0.0))),
-            ("line", ((0.50, 0.50), (0.50, 0.90))),
-        ],
-        (1, 0): [
-            ("poly", ((1.0, 0.60), (0.30, 0.60), (0.30, 0.0))),
-        ],
-        (1, 2): [
-            ("line", ((0.0, 0.80), (0.70, 0.80))),
-            ("line", ((0.70, 0.80), (0.70, 0.0))),
-            ("line", ((0.0, 0.20), (0.70, 0.20))),
-        ],
-        (2, 0): [
-            ("poly", ((0.30, 1.0), (0.30, 0.35), (1.0, 0.35))),
-        ],
-        (2, 1): [
-            ("poly", ((0.0, 0.35), (0.35, 0.35), (0.35, 1.0))),
-            ("line", ((0.35, 0.35), (1.0, 0.35))),
-        ],
-        (2, 2): [
-            ("poly", ((0.0, 0.35), (0.70, 0.35), (0.70, 1.0))),
-        ],
-    }
-    tile5_B = [
-        ("poly", ((0.0, 0.60), (0.25, 0.60), (0.25, 1.0))),
-        ("poly", ((0.75, 1.0), (0.75, 0.80), (1.0, 0.80))),
-        ("poly", ((0.35, 0.0), (0.35, 0.20), (1.0, 0.20))),
-    ]
-    opt5_strokes = [
-        _rot90_cw(tile5_B),
-        tile5_B,
-        _flip_h(tile5_B),
-        _rot180(tile5_B),
-        _rot90_ccw(tile5_B),
-    ]
-    practices.append((
-        3, 3, grid5, (1, 1), opt5_strokes, 1,
-        "A garden path and archway are drawn across the 3 × 3 grid below, with the middle tile missing. "
-        "Which tile (A through E) completes the picture?",
-        "In the center square, two arch lines enter from the top (at 0.25 and 0.75), one line enters from the "
-        "left (at 0.60), one enters from the bottom (at 0.35), and two exit through the right (at 0.20 and 0.80). "
-        "Only tile B connects all of these endpoints cleanly.",
-    ))
-
-    # Practice .6: River Confluence & Bridges (3x4 grid, missing tile (1, 2) -> Answer: C)
-    # In (1, 2):
-    # - top: [0.45]
-    # - bot: [0.30, 0.75]
-    # - left: [0.55]
-    # - right: [0.25, 0.70]
-    grid6 = {
-        (0, 2): [
-            ("curve", ((0.15, 0.85), (0.35, 0.75), (0.45, 0.45), (0.45, 0.0))),
-        ],
-        (1, 0): [
-            ("curve", ((0.15, 0.25), (0.45, 0.55), (0.75, 0.55), (1.0, 0.55))),
-        ],
-        (1, 1): [
-            ("line", ((0.0, 0.55), (1.0, 0.55))),
-            ("line", ((0.40, 0.80), (0.40, 0.30))),
-            ("line", ((0.60, 0.80), (0.60, 0.30))),
-        ],
-        (1, 3): [
-            ("curve", ((0.0, 0.70), (0.45, 0.70), (0.65, 0.40), (0.85, 0.40))),
-            ("curve", ((0.0, 0.25), (0.35, 0.25), (0.55, 0.15), (0.55, 0.0))),
-        ],
-        (2, 2): [
-            ("curve", ((0.30, 1.0), (0.30, 0.45), (0.50, 0.25), (0.85, 0.25))),
-            ("curve", ((0.75, 1.0), (0.75, 0.65), (0.85, 0.55), (1.0, 0.55))),
-        ],
-        (2, 3): [
-            ("curve", ((0.0, 0.55), (0.30, 0.55), (0.55, 0.75), (0.55, 1.0))),
-        ],
-    }
-    tile6_C = [
-        ("curve", ((0.0, 0.55), (0.20, 0.55), (0.30, 0.30), (0.30, 0.0))),
-        ("curve", ((0.45, 1.0), (0.45, 0.75), (0.70, 0.70), (1.0, 0.70))),
-        ("curve", ((0.75, 0.0), (0.75, 0.18), (0.85, 0.25), (1.0, 0.25))),
-    ]
-    opt6_strokes = [
-        _rot90_cw(tile6_C),
-        _flip_h(tile6_C),
-        tile6_C,
-        _rot180(tile6_C),
-        _rot90_ccw(tile6_C),
-    ]
-    practices.append((
-        3, 4, grid6, (1, 2), opt6_strokes, 2,
-        "Streams flow across the 3 × 4 map below, and one square tile is missing. Which tile (A through E) "
-        "fits in the square marked with a question mark (?)?",
-        "In the missing square, one stream enters from the left (at 0.55) and curves down to the bottom (at 0.30), "
-        "one enters from the top (at 0.45) and curves to the upper-right (at 0.70), and a third connects the "
-        "bottom-right (0.75) to the lower-right edge (0.25). Only tile C matches all six boundary crossings.",
-    ))
-
-    # Practice .7: Lighthouse & Coastal Pier (3x3 grid, missing tile (1, 1) -> Answer: A)
-    # In (1, 1):
-    # - top: [0.35, 0.65]
-    # - bot: [0.25, 0.75]
-    # - left: [0.40]
-    # - right: [0.20, 0.55]
-    grid7 = {
-        (0, 1): [
-            # Lighthouse lantern room & roof at top
-            ("poly", ((0.35, 0.0), (0.35, 0.55), (0.65, 0.55), (0.65, 0.0))),
-            ("poly", ((0.28, 0.55), (0.50, 0.88), (0.72, 0.55), (0.28, 0.55))),
-            ("line", ((0.65, 0.70), (1.0, 0.85))),
-            ("line", ((0.65, 0.62), (1.0, 0.50))),
-        ],
-        (0, 2): [
-            # Light beams shining across sky
-            ("line", ((0.0, 0.85), (0.85, 0.95))),
-            ("line", ((0.0, 0.50), (0.85, 0.35))),
-        ],
-        (1, 0): [
-            # Rocky cliff on left meeting lighthouse at y=0.40
-            ("curve", ((0.15, 0.0), (0.35, 0.35), (0.65, 0.40), (1.0, 0.40))),
-        ],
-        (1, 2): [
-            # Wooden pier extending to the right at y=0.55 and y=0.20
-            ("poly", ((0.0, 0.55), (0.80, 0.55), (0.80, 0.20), (0.0, 0.20))),
-            ("line", ((0.35, 0.20), (0.35, 0.0))),
-            ("line", ((0.65, 0.20), (0.65, 0.0))),
-        ],
-        (2, 0): [
-            # Base of cliff & ocean wave
-            ("curve", ((0.15, 1.0), (0.10, 0.60), (0.10, 0.40), (0.05, 0.25))),
-            ("curve", ((0.05, 0.25), (0.40, 0.35), (0.70, 0.15), (1.0, 0.25))),
-        ],
-        (2, 1): [
-            # Lower lighthouse base & ocean wave
-            ("line", ((0.25, 1.0), (0.20, 0.25))),
-            ("line", ((0.75, 1.0), (0.80, 0.25))),
-            ("curve", ((0.0, 0.25), (0.35, 0.35), (0.65, 0.15), (1.0, 0.25))),
-        ],
-        (2, 2): [
-            # Pier pilings & ocean wave
-            ("line", ((0.35, 1.0), (0.35, 0.25))),
-            ("line", ((0.65, 1.0), (0.65, 0.25))),
-            ("curve", ((0.0, 0.25), (0.35, 0.35), (0.65, 0.15), (0.95, 0.25))),
-        ],
-    }
-    tile7_A = [
-        ("line", ((0.35, 1.0), (0.25, 0.0))),
-        ("line", ((0.65, 1.0), (0.75, 0.0))),
-        ("line", ((0.0, 0.40), (0.29, 0.40))),
-        ("line", ((0.70, 0.55), (1.0, 0.55))),
-        ("line", ((0.73, 0.20), (1.0, 0.20))),
-    ]
-    opt7_strokes = [
-        tile7_A,
-        _flip_h(tile7_A),
-        _rot90_cw(tile7_A),
-        _rot180(tile7_A),
-        _rot90_ccw(tile7_A),
-    ]
-    practices.append((
-        3, 3, grid7, (1, 1), opt7_strokes, 0,
-        "Which of the squares below is missing from the picture of the lighthouse?",
-        "In the center square, the two slanting tower walls connect (0.35, 0.65) on the top edge to (0.25, 0.75) "
-        "on the bottom edge, the cliff meets the left wall at height 0.40, and the two pier lines exit the right "
-        "edge at 0.20 and 0.55. Only tile A matches all of these edges.",
-    ))
-
-    # Practice .8: Castle Drawbridge & Moat (3x4 grid, missing tile (1, 1) -> Answer: D)
-    # In (1, 1):
-    # - top: [0.25, 0.80]
-    # - bot: [0.25, 0.60]
-    # - left: [0.35]
-    # - right: [0.35, 0.75]
-    grid8 = {
-        (0, 1): [
-            # Left turret battlements
-            ("poly", ((0.25, 0.0), (0.25, 0.75), (0.40, 0.75), (0.40, 0.60),
-                      (0.65, 0.60), (0.65, 0.75), (0.80, 0.75), (0.80, 0.0))),
-        ],
-        (0, 2): [
-            # Right turret battlements
-            ("poly", ((0.20, 0.0), (0.20, 0.75), (0.35, 0.75), (0.35, 0.60),
-                      (0.60, 0.60), (0.60, 0.75), (0.75, 0.75), (0.75, 0.0))),
-        ],
-        (1, 0): [
-            # Outer garden wall meeting left turret at y=0.35
-            ("poly", ((0.20, 0.0), (0.20, 0.35), (1.0, 0.35))),
-        ],
-        (1, 2): [
-            # Curtain wall & right turret
-            ("line", ((0.0, 0.75), (0.20, 0.75))),
-            ("line", ((0.20, 1.0), (0.20, 0.0))),
-            ("line", ((0.75, 1.0), (0.75, 0.0))),
-            ("line", ((0.0, 0.35), (0.20, 0.35))),
-            ("line", ((0.75, 0.50), (1.0, 0.50))),
-        ],
-        (1, 3): [
-            ("poly", ((0.0, 0.50), (0.75, 0.50), (0.75, 0.0))),
-        ],
-        (2, 0): [
-            ("poly", ((0.20, 1.0), (0.20, 0.25), (1.0, 0.25))),
-        ],
-        (2, 1): [
-            ("poly", ((0.0, 0.25), (0.25, 0.25), (0.25, 1.0))),
-            ("poly", ((0.60, 1.0), (0.60, 0.25), (1.0, 0.25))),
-        ],
-        (2, 2): [
-            ("poly", ((0.0, 0.25), (0.20, 0.25), (0.20, 1.0))),
-            ("poly", ((0.75, 1.0), (0.75, 0.25), (0.0, 0.25))),
-        ],
-        (2, 3): [
-            ("poly", ((0.75, 1.0), (0.75, 0.25), (0.15, 0.25))),
-        ],
-    }
-    tile8_D = [
-        ("line", ((0.25, 1.0), (0.25, 0.0))),
-        ("line", ((0.0, 0.35), (0.25, 0.35))),
-        ("poly", ((0.80, 1.0), (0.80, 0.75), (1.0, 0.75))),
-        ("poly", ((0.60, 0.0), (0.60, 0.35), (1.0, 0.35))),
-    ]
-    opt8_strokes = [
-        _rot90_cw(tile8_D),
-        _flip_h(tile8_D),
-        _rot180(tile8_D),
-        tile8_D,
-        _rot90_ccw(tile8_D),
-    ]
-    practices.append((
-        3, 4, grid8, (1, 1), opt8_strokes, 3,
-        "Which square tile (A through E) is missing from the castle drawing below?",
-        "In the missing square, the left turret wall runs straight from 0.25 at the top to 0.25 at the bottom "
-        "(with the outer wall meeting it from the left at 0.35), while the right turret wall enters at 0.80 from "
-        "the top to meet the upper bridge at 0.75 on the right, and the lower gate rises from 0.60 at the bottom "
-        "to 0.35 on the right. Only tile D fits.",
-    ))
-
-    # Verify all practice variations before sampling
-    for nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, _, _ in practices:
+    rng = random.Random(seed)
+    themes = ["sailboat", "paths", "mosaic", "tracks", "paths", "tracks"]
+    for idx in range(1, num_practice + 1):
+        theme = themes[(idx - 1) % len(themes)]
+        if theme == "sailboat":
+            nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, text, expl = _generate_dynamic_sailboat(rng)
+        else:
+            nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, text, expl = _generate_dynamic_network_puzzle(rng, theme=theme)
         check_missing_tile_geometry(nr, nc, g_strokes, miss_rc, o_strokes, ans_idx)
-
-    import random
-    if num_practice <= len(practices):
-        selected_practices = random.sample(practices, num_practice)
-    else:
-        selected_practices = list(practices)
-        random.shuffle(selected_practices)
-
-    for idx, (nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, text, expl) in enumerate(selected_practices, start=1):
-        # Randomly shuffle the 5 option tiles so every run has freshly randomized answer choices
-        perm = list(range(len(o_strokes)))
-        random.shuffle(perm)
-        shuffled_opts = [o_strokes[i] for i in perm]
-        new_ans_idx = perm.index(ans_idx)
-        ans_letter = LETTERS[new_ans_idx]
-        # Update explanation letter dynamically so it matches the randomized choice letter
-        orig_letter = LETTERS[ans_idx]
-        updated_expl = expl.replace(f"tile {orig_letter}", f"tile {ans_letter}").replace(
-            f"square {orig_letter}", f"square {ans_letter}"
-        )
-
-        check_missing_tile_geometry(nr, nc, g_strokes, miss_rc, shuffled_opts, new_ans_idx)
         fig_p = vstack([
             fig_tile_grid(nr, nc, g_strokes, miss_rc, s=30),
-            option_row([fig_tile(s, s=30) for s in shuffled_opts], gap=16),
+            option_row([fig_tile(s, s=30) for s in o_strokes], gap=16),
         ], gap=12)
         d.problem(
             f"Practice {set_num}.{idx}",
@@ -889,19 +507,15 @@ def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
             fig_p,
             "below",
         )
-        key.append((f"{set_num}.{idx}", ans_letter, updated_expl))
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
 
 GENERATE = q_2002_1
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}): {len(collector.problems)} problems generated.")
+    for test_seed in range(25):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 25 random seeds!")
