@@ -1,33 +1,20 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2007, Problem #5 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
-    option_row,
-    hstack,
-    vstack,
     colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2007, 5)
 
 
@@ -135,11 +122,85 @@ def fig_cloud_chain(ops, end_val):
 
         c.setFillColor(colors.black)
         c.setStrokeColor(colors.black)
+        c.setLineWidth(1)
 
     return w, h, draw
 
 
-def q_2007_5(d, key, set_num=1, include_orig=True, num_practice=3):
+NAMES = ["Leo", "Maya", "Noah", "Sofia", "Clara", "Sam", "Elena", "Max"]
+INV_OP = {"+": "-", "-": "+", "×": "÷", "÷": "×"}
+
+
+def _generate_dynamic_cloud_problem(rng):
+    """Procedurally generate a 3-step cloud number chain problem."""
+    actor = rng.choice(NAMES)
+    for _ in range(400):
+        start_val = rng.randint(3, 15)
+        op_types = rng.sample(["+", "-", "×", "÷"], 3)
+        if not ({"×", "÷"} & set(op_types)):
+            continue
+        vals = [start_val]
+        ops = []
+        ok = True
+        for op in op_types:
+            cur = vals[-1]
+            if op == "+":
+                k = rng.randint(2, 9)
+                nxt = cur + k
+            elif op == "-":
+                if cur <= 3:
+                    ok = False
+                    break
+                k = rng.randint(2, min(9, cur - 2))
+                nxt = cur - k
+            elif op == "×":
+                if cur > 18:
+                    ok = False
+                    break
+                k = rng.randint(2, 4 if cur <= 12 else 3)
+                nxt = cur * k
+            else:
+                divs = [d for d in range(2, 7) if cur % d == 0 and cur // d >= 2]
+                if not divs:
+                    ok = False
+                    break
+                k = rng.choice(divs)
+                nxt = cur // k
+            ops.append((op, k))
+            vals.append(nxt)
+        if not ok:
+            continue
+        end_val = vals[-1]
+        if (ops, end_val) == ([("-", 2), (":", 3), ("+", 4)], 5):
+            continue
+
+        offset = rng.randint(0, 4)
+        step = rng.choice([1, 2])
+        lo = max(1, start_val - offset * step)
+        ch_vals = [lo + i * step for i in range(5)]
+        if start_val not in ch_vals:
+            ch_vals[offset] = start_val
+            ch_vals.sort()
+        opts = [str(v) for v in ch_vals]
+        ans_idx = ch_vals.index(start_val)
+        check_cloud_chain(ops, end_val, opts, ans_idx)
+
+        rev_steps = []
+        for i in range(2, -1, -1):
+            op, k = ops[i]
+            inv = INV_OP[op]
+            rev_steps.append(f"before {op} {k} the number was {vals[i + 1]} {inv} {k} = {vals[i]}")
+        text = (
+            f"{actor} wrote a secret number in the dark cloud and followed the arrow calculations shown "
+            f"in the diagram to get <b>{end_val}</b> in the last cloud. What number did {actor} write in the dark cloud?"
+        )
+        expl = f"Working backwards from {end_val}: {'; '.join(rev_steps)}."
+        return ops, end_val, opts, ans_idx, text, expl
+
+    raise RuntimeError("Failed to generate cloud chain problem")
+
+
+def q_2007_5(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Number Chain in the Clouds", "Based on 2007, Problem 5")
 
     orig_ops = [("-", 2), (":", 3), ("+", 4)]
@@ -161,54 +222,9 @@ def q_2007_5(d, key, set_num=1, include_orig=True, num_practice=3):
             "before ÷ 3 it was 1 × 3 = 3; and before - 2 it was 3 + 2 = 5.",
         ))
 
-    practices = [
-        # Practice .1: ((? + 3) × 2) - 5 = 13 -> ? = 6 (Answer: C)
-        (
-            [("+", 3), ("×", 2), ("-", 5)],
-            13,
-            ["4", "5", "6", "7", "8"],
-            2,
-            "Leo wrote his secret number in the dark cloud and followed the arrow calculations shown "
-            "in the diagram to get <b>13</b> in the last cloud. What is Leo's secret number?",
-            "Working backwards from 13: before - 5 the number was 13 + 5 = 18; before × 2 it was 18 ÷ 2 = 9; "
-            "and before + 3 it was 9 - 3 = 6.",
-        ),
-        # Practice .2: ((? × 3) - 4) ÷ 2 = 7 -> ? = 6 (Answer: B)
-        (
-            [("×", 3), ("-", 4), ("÷", 2)],
-            7,
-            ["4", "6", "7", "8", "10"],
-            1,
-            "Maya wrote her favourite number in the dark cloud and performed the three steps in the diagram "
-            "to reach <b>7</b>. What number did Maya write in the dark cloud?",
-            "Working backwards from 7: before ÷ 2 the number was 7 × 2 = 14; before - 4 it was 14 + 4 = 18; "
-            "and before × 3 it was 18 ÷ 3 = 6.",
-        ),
-        # Practice .3: ((? - 5) × 4) + 6 = 22 -> ? = 9 (Answer: D)
-        (
-            [("-", 5), ("×", 4), ("+", 6)],
-            22,
-            ["6", "7", "8", "9", "11"],
-            3,
-            "Noah wrote a number in the dark cloud and calculated step by step along the arrows to get <b>22</b> "
-            "at the end. Which number did Noah start with?",
-            "Working backwards from 22: before + 6 the number was 22 - 6 = 16; before × 4 it was 16 ÷ 4 = 4; "
-            "and before - 5 it was 4 + 5 = 9.",
-        ),
-        # Practice .4: ((? + 6) ÷ 4) × 5 = 15 -> ? = 6 (Answer: A)
-        (
-            [("+", 6), ("÷", 4), ("×", 5)],
-            15,
-            ["6", "8", "10", "12", "14"],
-            0,
-            "Sofia wrote a number in the dark cloud and followed the sequence of calculations in the diagram "
-            "to end up with <b>15</b>. What number did Sofia write in the dark cloud?",
-            "Working backwards from 15: before × 5 the number was 15 ÷ 5 = 3; before ÷ 4 it was 3 × 4 = 12; "
-            "and before + 6 it was 12 - 6 = 6.",
-        ),
-    ]
-
-    for idx, (ops, end_val, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+    rng = random.Random(seed)
+    for idx in range(1, num_practice + 1):
+        ops, end_val, opts, ans_idx, text, expl = _generate_dynamic_cloud_problem(rng)
         check_cloud_chain(ops, end_val, opts, ans_idx)
         d.problem(
             f"Practice {set_num}.{idx}",
@@ -219,16 +235,13 @@ def q_2007_5(d, key, set_num=1, include_orig=True, num_practice=3):
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2007_5
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")

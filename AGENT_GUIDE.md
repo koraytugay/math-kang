@@ -166,7 +166,7 @@ The following 33 question generators are currently implemented in `question-gene
 | `(2007, 1)` | `question-generator/2007-1.py` | `argon` (reviewed high effort, dynamic) | `q_2007_1` | Forking road diagram — choosing one number/letter per road split |
 | `(2007, 3)` | `question-generator/2007-3.py` | `argon` (reviewed high effort, dynamic) | `q_2007_3` | Counting common letters shared by two words |
 | `(2007, 4)` | `question-generator/2007-4.py` | `argon` (reviewed high effort, dynamic) | `q_2007_4` | Next number greater than $N$ with the same sum of digits |
-| `(2007, 5)` | `question-generator/2007-5.py` | `argon` | `q_2007_5` | Number chain in the clouds — working backwards through arithmetic steps |
+| `(2007, 5)` | `question-generator/2007-5.py` | `argon` (reviewed high effort, dynamic) | `q_2007_5` | Number chain in the clouds — working backwards through arithmetic steps |
 | `(2007, 8)` | `question-generator/2007-8.py` | `argon` | `q_2007_8` | Joining a piece with the given shape to form a solid rectangle |
 | `(2007, 10)` | `question-generator/2007-10.py` | `argon` | `q_2007_10` | 3×3 mini-sudoku — placing numbers 1, 2, 3 in rows and columns |
 | `(2007, 12)` | `question-generator/2007-12.py` | `argon` | `q_2007_12` | Calendar birthday date calculation given older/younger offset |
