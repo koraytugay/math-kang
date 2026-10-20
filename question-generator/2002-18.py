@@ -1,33 +1,20 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2002, Problem #18 - Question Generator."""
 import os
 import sys
-import math
+import random
 import itertools
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
-    option_row,
-    hstack,
-    vstack,
-    colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2002, 18)
 
 
@@ -43,10 +30,174 @@ def check_logic_matching(people, items, valid_fn, choices_check_fn, expected_idx
     assert matches == [expected_idx], f"Expected choice {expected_idx}, got {matches} for sol={sol}"
 
 
-def q_2002_18(d, key, set_num=1, include_orig=True, num_practice=3):
+DOMAINS = [
+    {
+        "intro": "each own a different pet: a rabbit, a hamster, a turtle, and a canary",
+        "items": ["rabbit", "hamster", "turtle", "canary"],
+        "pair_group": {"rabbit", "hamster"},
+        "pair_desc": "both own furry pets",
+        "pair_explain": "the two furry pets (rabbit and hamster)",
+        "single_item": "canary",
+        "single_desc": "owns a bird",
+        "single_explain": "the bird (canary)",
+        "neg_tmpl": "{p} does not have the {it}",
+        "stmt_tmpl": "{p} has a {it}",
+    },
+    {
+        "intro": "each play a different instrument: a violin, a guitar, drums, and a flute",
+        "items": ["violin", "guitar", "drums", "flute"],
+        "pair_group": {"violin", "guitar"},
+        "pair_desc": "both play stringed instruments",
+        "pair_explain": "the two stringed instruments (violin and guitar)",
+        "single_item": "drums",
+        "single_desc": "plays percussion",
+        "single_explain": "percussion (drums)",
+        "neg_tmpl": "{p} does not play the {it}",
+        "stmt_tmpl": "{p} plays the {it}",
+    },
+    {
+        "intro": "each brought a different snack: an apple, a banana, a cookie, and a pretzel",
+        "items": ["apple", "banana", "cookie", "pretzel"],
+        "pair_group": {"apple", "banana"},
+        "pair_desc": "both brought fruits",
+        "pair_explain": "the two fruits (apple and banana)",
+        "single_item": "cookie",
+        "single_desc": "brought a sweet baked treat",
+        "single_explain": "the sweet treat (cookie)",
+        "neg_tmpl": "{p} does not like {it}s",
+        "stmt_tmpl": "{p} brought the {it}",
+    },
+    {
+        "intro": "each do a different sport: soccer, tennis, swimming, and cycling",
+        "items": ["soccer", "tennis", "swimming", "cycling"],
+        "pair_group": {"soccer", "tennis"},
+        "pair_desc": "both play sports with a ball",
+        "pair_explain": "the two ball sports (soccer and tennis)",
+        "single_item": "swimming",
+        "single_desc": "races in the pool",
+        "single_explain": "swimming",
+        "neg_tmpl": "{p} does not play {it}",
+        "stmt_tmpl": "{p} does {it}",
+    },
+    {
+        "intro": "each wear a different hat: a red cap, a blue cap, a sun visor, and a wool beanie",
+        "items": ["red cap", "blue cap", "wool beanie", "sun visor"],
+        "pair_group": {"red cap", "blue cap"},
+        "pair_desc": "both wear baseball caps",
+        "pair_explain": "the two baseball caps (red cap and blue cap)",
+        "single_item": "wool beanie",
+        "single_desc": "wears a warm winter hat",
+        "single_explain": "the wool beanie",
+        "neg_tmpl": "{p} does not wear the {it}",
+        "stmt_tmpl": "{p} wears the {it}",
+    },
+]
+
+NAME_QUADS = [
+    ["Anna", "Ben", "Clara", "David"],
+    ["Eva", "Finn", "Grace", "Henry"],
+    ["Leo", "Mia", "Noah", "Olivia"],
+    ["Sam", "Tara", "Uma", "Vic"],
+    ["Iris", "Jack", "Kate", "Liam"],
+    ["Maya", "Nora", "Owen", "Paul"],
+]
+
+
+def _generate_dynamic_logic_problem(rng, domain_idx=0):
+    """Procedurally generate a 4-person logic deduction problem with verified unique solution."""
+    dom = DOMAINS[domain_idx % len(DOMAINS)]
+    people = list(rng.choice(NAME_QUADS))
+    items = list(dom["items"])  # [pair0, pair1, single_item, leftover_item]
+    pair0, pair1, single_it, leftover_it = items[0], items[1], items[2], items[3]
+    pair_group = dom["pair_group"]
+
+    # Shuffle role assignment among the 4 people
+    roles = list(people)
+    rng.shuffle(roles)
+    p_pairA, p_pairB, p_single, p_leftover = roles[0], roles[1], roles[2], roles[3]
+
+    # Pick which of {pair0, pair1} p_pairA avoids
+    if rng.random() < 0.5:
+        disliked_it, got_A, got_B = pair0, pair1, pair0
+    else:
+        disliked_it, got_A, got_B = pair1, pair0, pair1
+
+    valid_fn = lambda a, pA=p_pairA, pB=p_pairB, pS=p_single, pg=pair_group, s_it=single_it, dis=disliked_it: (
+        a[pA] in pg and a[pB] in pg and a[pS] == s_it and a[pA] != dis
+    )
+
+    true_map = {
+        p_pairA: got_A,
+        p_pairB: got_B,
+        p_single: single_it,
+        p_leftover: leftover_it,
+    }
+
+    ask_not_true = rng.random() < 0.7
+    stmt_tmpl = dom["stmt_tmpl"]
+    neg_clause = dom["neg_tmpl"].format(p=p_pairA, it=disliked_it)
+
+    if ask_not_true:
+        # 4 true statements + 1 false statement
+        false_person = rng.choice([p_pairB, p_leftover, p_pairA])
+        wrong_it = got_A if false_person == p_pairB else (got_B if false_person == p_leftover else disliked_it)
+        cand_pairs = [
+            (p_pairA, got_A, True),
+            (p_pairB, got_B, True),
+            (p_single, single_it, True),
+            (p_leftover, leftover_it, True),
+            (false_person, wrong_it, False),
+        ]
+        rng.shuffle(cand_pairs)
+        opts = [stmt_tmpl.format(p=p, it=it) for p, it, _ in cand_pairs]
+        c_fns = [
+            (lambda a, p=p, it=it: a[p] != it)
+            for p, it, _ in cand_pairs
+        ]
+        ans_idx = [i for i, (_, _, is_t) in enumerate(cand_pairs) if not is_t][0]
+        q_end = "Which statement is <b>not</b> true?"
+        false_stmt = opts[ans_idx]
+        expl = (
+            f"{p_single} has {dom['single_explain']}. {p_pairA} and {p_pairB} have {dom['pair_explain']}. "
+            f"Since {neg_clause}, {p_pairA} has the {got_A} and {p_pairB} has the {got_B}. "
+            f"That leaves the {leftover_it} for {p_leftover}. Thus, '{false_stmt}' ({LETTERS[ans_idx]}) is not true."
+        )
+    else:
+        # 1 true statement (about p_leftover or p_pairB) + 4 false statements
+        cand_pairs = [
+            (p_leftover, leftover_it, True),
+            (p_leftover, got_A, False),
+            (p_leftover, got_B, False),
+            (p_leftover, single_it, False),
+            (p_pairA, disliked_it, False),
+        ]
+        rng.shuffle(cand_pairs)
+        opts = [stmt_tmpl.format(p=p, it=it) for p, it, _ in cand_pairs]
+        c_fns = [
+            (lambda a, p=p, it=it: a[p] == it)
+            for p, it, _ in cand_pairs
+        ]
+        ans_idx = [i for i, (_, _, is_t) in enumerate(cand_pairs) if is_t][0]
+        q_end = "Which statement is <b>true</b>?"
+        true_stmt = opts[ans_idx]
+        expl = (
+            f"{p_pairA} and {p_pairB} have {dom['pair_explain']}. Since {neg_clause}, {p_pairA} has the {got_A} "
+            f"and {p_pairB} has the {got_B}. {p_single} has {dom['single_explain']}, which leaves the {leftover_it} "
+            f"for {p_leftover}. Therefore, '{true_stmt}' ({LETTERS[ans_idx]}) is true."
+        )
+
+    text = (
+        f"{people[0]}, {people[1]}, {people[2]}, and {people[3]} {dom['intro']}. "
+        f"{p_pairA} and {p_pairB} {dom['pair_desc']}, {p_single} {dom['single_desc']}, and {neg_clause}. "
+        f"{q_end}"
+    )
+    check_logic_matching(people, items, valid_fn, c_fns, ans_idx)
+    return people, items, valid_fn, c_fns, opts, ans_idx, text, expl
+
+
+def q_2002_18(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Logic Deduction: Matching Pets & Items", "Based on 2002, Problem 18")
 
-    # Original 2002 #18
     people0 = ["Julien", "Manon", "Nicolas", "Fabienne"]
     pets0 = ["cat", "dog", "parrot", "goldfish"]
     furry0 = {"cat", "dog"}
@@ -57,11 +208,11 @@ def q_2002_18(d, key, set_num=1, include_orig=True, num_practice=3):
         pets0,
         lambda a: (a["Manon"] in furry0 and a["Fabienne"] in four_legs0 and a["Nicolas"] in bird0 and a["Manon"] != "cat"),
         [
-            lambda a: a["Fabienne"] != "dog",      # A: "Fabienne has a dog" is NOT true
-            lambda a: a["Nicolas"] != "parrot",    # B: "Nicolas has a parrot" is NOT true
-            lambda a: a["Julien"] != "goldfish",   # C: "Julien has a goldfish" is NOT true
-            lambda a: a["Fabienne"] != "cat",      # D: "Fabienne has a cat" is NOT true
-            lambda a: a["Manon"] != "dog",         # E: "Manon has a dog" is NOT true
+            lambda a: a["Fabienne"] != "dog",
+            lambda a: a["Nicolas"] != "parrot",
+            lambda a: a["Julien"] != "goldfish",
+            lambda a: a["Fabienne"] != "cat",
+            lambda a: a["Manon"] != "dog",
         ],
         0,
     )
@@ -88,136 +239,13 @@ def q_2002_18(d, key, set_num=1, include_orig=True, num_practice=3):
             "That leaves the goldfish for Julien. Therefore, 'Fabienne has a dog' (A) is NOT true.",
         ))
 
-    practices = [
-        # Practice .1: 4 kids (Anna, Ben, Clara, David), pets (rabbit, hamster, turtle, canary). Answer: C
-        (
-            ["Anna", "Ben", "Clara", "David"],
-            ["rabbit", "hamster", "turtle", "canary"],
-            lambda a: (
-                a["Ben"] in {"rabbit", "hamster"}
-                and a["Clara"] in {"rabbit", "hamster"}
-                and a["David"] == "canary"
-                and a["Ben"] != "hamster"
-            ),
-            [
-                lambda a: a["Ben"] != "rabbit",
-                lambda a: a["David"] != "canary",
-                lambda a: a["Clara"] != "rabbit",  # False statement: "Clara has a rabbit"
-                lambda a: a["Anna"] != "turtle",
-                lambda a: a["Clara"] != "hamster",
-            ],
-            [
-                "Ben has a rabbit",
-                "David has a canary",
-                "Clara has a rabbit",
-                "Anna has a turtle",
-                "Clara has a hamster",
-            ],
-            2,
-            "Anna, Ben, Clara, and David each own a different pet: a rabbit, a hamster, a turtle, and a canary. "
-            "Ben and Clara both own furry pets, David owns a bird, and Ben does not have the hamster. "
-            "Which statement is <b>not</b> true?",
-            "David has the bird (canary). The two furry pets are the rabbit and the hamster, belonging to Ben and Clara. "
-            "Since Ben does not have the hamster, Ben has the rabbit and Clara has the hamster. "
-            "That leaves the turtle for Anna. Thus, 'Clara has a rabbit' (C) is not true.",
-        ),
-        # Practice .2: 4 friends (Eva, Finn, Grace, Henry), instruments (violin, guitar, flute, drums). Answer: D
-        (
-            ["Eva", "Finn", "Grace", "Henry"],
-            ["violin", "guitar", "flute", "drums"],
-            lambda a: (
-                a["Eva"] in {"violin", "guitar"}
-                and a["Grace"] in {"violin", "guitar"}
-                and a["Finn"] == "drums"
-                and a["Eva"] != "violin"
-            ),
-            [
-                lambda a: a["Eva"] != "guitar",
-                lambda a: a["Finn"] != "drums",
-                lambda a: a["Grace"] != "violin",
-                lambda a: a["Henry"] != "guitar",  # False statement: "Henry plays the guitar"
-                lambda a: a["Henry"] != "flute",
-            ],
-            [
-                "Eva plays the guitar",
-                "Finn plays the drums",
-                "Grace plays the violin",
-                "Henry plays the guitar",
-                "Henry plays the flute",
-            ],
-            3,
-            "Eva, Finn, Grace, and Henry each play a different instrument: a violin, a guitar, a flute, and drums. "
-            "Eva and Grace play stringed instruments, Finn plays percussion (drums), and Eva does not play the violin. "
-            "Which statement is <b>not</b> true?",
-            "The stringed instruments are the violin and the guitar. Since Eva does not play the violin, Eva plays the guitar "
-            "and Grace plays the violin. Finn plays the drums, leaving the flute for Henry. "
-            "Therefore, 'Henry plays the guitar' (D) is not true.",
-        ),
-        # Practice .3: 4 kids (Leo, Mia, Noah, Olivia), snacks (apple, banana, cookie, pretzel). Ask what Olivia has -> E
-        (
-            ["Leo", "Mia", "Noah", "Olivia"],
-            ["apple", "banana", "cookie", "pretzel"],
-            lambda a: (
-                a["Leo"] in {"apple", "banana"}
-                and a["Mia"] in {"apple", "banana"}
-                and a["Noah"] == "cookie"
-                and a["Leo"] != "apple"
-            ),
-            [
-                lambda a: a["Olivia"] == "apple",
-                lambda a: a["Olivia"] == "banana",
-                lambda a: a["Olivia"] == "cookie",
-                lambda a: a["Leo"] == "apple",
-                lambda a: a["Olivia"] == "pretzel",
-            ],
-            [
-                "Olivia has the apple",
-                "Olivia has the banana",
-                "Olivia has the cookie",
-                "Leo has the apple",
-                "Olivia has the pretzel",
-            ],
-            4,
-            "Leo, Mia, Noah, and Olivia each brought a different snack: an apple, a banana, a cookie, and a pretzel. "
-            "Leo and Mia brought fruits, Noah brought the cookie, and Leo does not like apples. "
-            "Which statement is <b>true</b>?",
-            "Leo and Mia have the two fruits (apple and banana). Since Leo does not like apples, Leo has the banana and "
-            "Mia has the apple. Noah has the cookie, which leaves the pretzel for Olivia. So statement E is true.",
-        ),
-        # Practice .4: 4 athletes (Sam, Tara, Uma, Vic), sports (soccer, tennis, swimming, cycling). Answer: B
-        (
-            ["Sam", "Tara", "Uma", "Vic"],
-            ["soccer", "tennis", "swimming", "cycling"],
-            lambda a: (
-                a["Sam"] in {"soccer", "tennis"}
-                and a["Uma"] in {"soccer", "tennis"}
-                and a["Tara"] == "swimming"
-                and a["Sam"] != "soccer"
-            ),
-            [
-                lambda a: a["Sam"] != "tennis",
-                lambda a: a["Uma"] != "tennis",  # False statement: "Uma plays tennis"
-                lambda a: a["Tara"] != "swimming",
-                lambda a: a["Vic"] != "cycling",
-                lambda a: a["Uma"] != "soccer",
-            ],
-            [
-                "Sam plays tennis",
-                "Uma plays tennis",
-                "Tara does swimming",
-                "Vic does cycling",
-                "Uma plays soccer",
-            ],
-            1,
-            "Sam, Tara, Uma, and Vic each do a different sport: soccer, tennis, swimming, and cycling. "
-            "Sam and Uma play sports with a ball, Tara is in the pool, and Sam does not play soccer. "
-            "Which statement is <b>not</b> true?",
-            "The two ball sports are soccer and tennis. Since Sam does not play soccer, Sam plays tennis and Uma plays soccer. "
-            "Tara does swimming, leaving cycling for Vic. Thus, 'Uma plays tennis' (B) is not true.",
-        ),
-    ]
-
-    for idx, (p_list, it_list, v_fn, c_fns, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+    rng = random.Random(seed)
+    dom_order = list(range(len(DOMAINS)))
+    rng.shuffle(dom_order)
+    for idx in range(1, num_practice + 1):
+        p_list, it_list, v_fn, c_fns, opts, ans_idx, text, expl = _generate_dynamic_logic_problem(
+            rng, domain_idx=dom_order[(idx - 1) % len(dom_order)]
+        )
         check_logic_matching(p_list, it_list, v_fn, c_fns, ans_idx)
         d.problem(
             f"Practice {set_num}.{idx}",
@@ -227,16 +255,13 @@ def q_2002_18(d, key, set_num=1, include_orig=True, num_practice=3):
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2002_18
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")
