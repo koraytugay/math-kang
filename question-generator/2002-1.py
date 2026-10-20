@@ -677,11 +677,16 @@ def q_2002_1(d, key, set_num=1, include_orig=True, num_practice=3):
         "bottom-right (0.75) to the lower-right edge (0.25). Only tile C matches all six boundary crossings.",
     ))
 
-    if isinstance(num_practice, int) and num_practice < 0:
-        import random
-        selected_practices = random.sample(practices, min(abs(num_practice), len(practices)))
+    # Verify all practice variations before sampling
+    for nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, _, _ in practices:
+        check_missing_tile_geometry(nr, nc, g_strokes, miss_rc, o_strokes, ans_idx)
+
+    import random
+    if num_practice <= len(practices):
+        selected_practices = random.sample(practices, num_practice)
     else:
-        selected_practices = practices[:num_practice]
+        selected_practices = list(practices)
+        random.shuffle(selected_practices)
 
     for idx, (nr, nc, g_strokes, miss_rc, o_strokes, ans_idx, text, expl) in enumerate(selected_practices, start=1):
         check_missing_tile_geometry(nr, nc, g_strokes, miss_rc, o_strokes, ans_idx)
