@@ -1,38 +1,26 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2002, Problem #20 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
-    option_row,
     hstack,
-    vstack,
     colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2002, 20)
 
 
 def make_tunnel_cubes(outer_w, outer_h, hole_w, hole_h, depth):
-    """Build a set of (ix, iy, iz) unit cubes for a tunnel with centered/bottom hole."""
+    """Build a set of (ix, iy, iz) unit cubes for a tunnel with centered hole."""
     cubes = set()
     x0 = (outer_w - hole_w) // 2
     y0 = (outer_h - hole_h) // 2
@@ -120,22 +108,100 @@ def fig_cube_structure(cubes, s=11, label=None):
 
         c.setFillColor(colors.black)
         c.setStrokeColor(colors.black)
+        c.setLineWidth(1)
 
     return w, h, draw
 
 
 def check_tunnel_pyramid(t_cubes, p_cubes, choices, ans_idx):
     unused = len(t_cubes) - len(p_cubes)
+    assert unused > 0, f"Expected positive unused cubes, got {unused}"
     matches = [i for i, ch in enumerate(choices) if int(ch) == unused]
     assert matches == [ans_idx], f"Tunnel/pyramid unused={unused}, choices={choices}, ans_idx={ans_idx}"
 
 
-def q_2002_20(d, key, set_num=1, include_orig=True, num_practice=3):
+NAMES = ["Leo", "Clara", "Max", "Zoe", "Noah", "Maya", "Sam", "Elena"]
+
+
+def _generate_dynamic_tunnel_pyramid(rng, variant_idx=0):
+    """Procedurally generate a 3D tunnel-to-pyramid cube counting problem."""
+    actor = rng.choice(NAMES)
+    use_5x5 = (variant_idx % 2 == 0)
+
+    if use_5x5:
+        outer_s, hole_s = 5, 3
+        h1 = rng.choice([1, 2])
+        h2 = rng.choice([1, 2])
+        h3 = rng.choice([1, 2, 3])
+        layer_specs = [(5, 5, h1), (3, 3, h2), (1, 1, h3)]
+        p_cubes = make_stepped_pyramid_cubes(layer_specs)
+        p_count = len(p_cubes)
+        per_layer = outer_s * outer_s - hole_s * hole_s  # 16
+        min_depth = (p_count // per_layer) + 1
+        depth = rng.randint(max(3, min_depth), max(4, min_depth + 1))
+        t_cubes = make_tunnel_cubes(outer_s, outer_s, hole_s, hole_s, depth)
+        t_count = len(t_cubes)
+        unused = t_count - p_count
+
+        l1_str = f"{h1} layer of 5 × 5" if h1 == 1 else f"{h1} layers of 5 × 5"
+        l2_str = f"{h2} layer of 3 × 3" if h2 == 1 else f"{h2} layers of 3 × 3"
+        l3_str = f"{h3} single cube" if h3 == 1 else f"a stack of {h3} single cubes"
+        text = (
+            f"{actor} built a tunnel {depth} cubes deep with a 5 × 5 outer square and a 3 × 3 tunnel opening (fig.1). "
+            f"{actor} then rearranged the cubes into a stepped pyramid (fig.2) with {l1_str} at the base, "
+            f"{l2_str} in the middle, and {l3_str} on top. How many cubes from the tunnel were <i>not</i> used?"
+        )
+        expl = (
+            f"Each of the {depth} depth layers of the tunnel has 5×5 - 3×3 = 25 - 9 = 16 cubes, so the tunnel has "
+            f"{depth} × 16 = {t_count} cubes in total. The stepped pyramid uses "
+            f"{h1}×25 + {h2}×9 + {h3}×1 = {p_count} cubes. Therefore, {t_count} - {p_count} = {unused} cubes were not used."
+        )
+    else:
+        outer_s, hole_s = 4, 2
+        h1 = rng.choice([1, 2])
+        h2 = rng.choice([1, 2, 3])
+        layer_specs = [(4, 4, h1), (2, 2, h2)]
+        p_cubes = make_stepped_pyramid_cubes(layer_specs)
+        p_count = len(p_cubes)
+        per_layer = outer_s * outer_s - hole_s * hole_s  # 12
+        min_depth = (p_count // per_layer) + 1
+        depth = rng.randint(max(3, min_depth), max(4, min_depth + 1))
+        t_cubes = make_tunnel_cubes(outer_s, outer_s, hole_s, hole_s, depth)
+        t_count = len(t_cubes)
+        unused = t_count - p_count
+
+        l1_str = f"{h1} layer of 4 × 4" if h1 == 1 else f"{h1} layers of 4 × 4"
+        l2_str = f"{h2} layer of 2 × 2" if h2 == 1 else f"{h2} layers of 2 × 2"
+        text = (
+            f"{actor} made a tunnel {depth} cubes deep using a 4 × 4 square frame with a 2 × 2 hole in the center (fig.1). "
+            f"Then {actor} built a stepped pedestal (fig.2) with {l1_str} at the bottom and {l2_str} on top. "
+            f"How many cubes from the tunnel were <i>not</i> used?"
+        )
+        expl = (
+            f"Each of the {depth} tunnel layers contains 4×4 - 2×2 = 16 - 4 = 12 cubes, so the tunnel has "
+            f"{depth} × 12 = {t_count} cubes in total. The pedestal uses {h1}×16 + {h2}×4 = {p_count} cubes. "
+            f"Therefore, {t_count} - {p_count} = {unused} cubes were not used."
+        )
+
+    cands = {unused}
+    for delta in [-4, -2, 2, 4, -6, 6, 1, -1, 3, -3]:
+        if len(cands) >= 5:
+            break
+        v = unused + delta
+        if v >= 1:
+            cands.add(v)
+    vals = sorted(list(cands))[:5]
+    if rng.random() < 0.4:
+        vals = list(reversed(vals))
+    opts = [str(v) for v in vals]
+    ans_idx = vals.index(unused)
+    check_tunnel_pyramid(t_cubes, p_cubes, opts, ans_idx)
+    return t_cubes, p_cubes, opts, ans_idx, text, expl
+
+
+def q_2002_20(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Rearranging 3D Cube Tunnel into a Pyramid", "Based on 2002, Problem 20")
 
-    # Original 2002 #20:
-    # Tunnel: 5x5 front with 3x3 hole (16 cubes per layer), 4 layers deep -> 64 cubes.
-    # Pyramid (3-step pyramid 5x5 + 3x3 + 1x1 = 25 + 9 + 1 = 35 cubes -> 64 - 35 = 29 unused, Choice B)
     t0 = make_tunnel_cubes(5, 5, 3, 3, 4)
     p0 = make_stepped_pyramid_cubes([(5, 5, 1), (3, 3, 1), (1, 1, 1)])
     opts0 = ["34", "29", "22", "18", "15"]
@@ -163,65 +229,9 @@ def q_2002_20(d, key, set_num=1, include_orig=True, num_practice=3):
             "So 64 - 35 = 29 cubes were not used.",
         ))
 
-    practices = [
-        # Practice .1: Tunnel 5x5 with 3x3 hole, 3 layers deep = 3 * 16 = 48 cubes.
-        # Pyramid: 5x5 + 3x3 + 1x1 = 35 cubes. Unused = 48 - 35 = 13 cubes (Answer: A)
-        (
-            make_tunnel_cubes(5, 5, 3, 3, 3),
-            make_stepped_pyramid_cubes([(5, 5, 1), (3, 3, 1), (1, 1, 1)]),
-            ["13", "15", "18", "21", "23"],
-            0,
-            "Leo built a tunnel 3 cubes deep with a 5 × 5 outer frame and a 3 × 3 tunnel opening (fig.1). "
-            "He then used some of those cubes to build a 3-layer stepped pyramid with 5 × 5, 3 × 3, and 1 × 1 layers (fig.2). "
-            "How many cubes from the tunnel were left over?",
-            "Each of the 3 layers of the tunnel has 5×5 - 3×3 = 25 - 9 = 16 cubes, so the tunnel has 3 × 16 = 48 cubes. "
-            "The pyramid uses 25 + 9 + 1 = 35 cubes. That leaves 48 - 35 = 13 cubes unused.",
-        ),
-        # Practice .2: Tunnel 4x4 with 2x2 hole, 4 layers deep = 4 * (16 - 4) = 48 cubes.
-        # Pyramid: 3-layer stepped pyramid of 4x4 + 2x2 + 1x1? To stay centered, 4x4 + 2x2 = 16 + 4 = 20 cubes (2-layer stepped platform)
-        # Or 4x4 (16) + 3x3 (9) + 2x2 (4) + 1x1 (1) = 30 cubes! Wait: let's use 5x5 with 3x3 hole, 4 layers deep (64 cubes)
-        # and pyramid with 2-cube-high 3x3 layer and 3-cube-high 1x1 spire (25 + 18 + 3 = 46 cubes) -> 64 - 46 = 18 (Answer: D)!
-        (
-            make_tunnel_cubes(5, 5, 3, 3, 4),
-            make_stepped_pyramid_cubes([(5, 5, 1), (3, 3, 2), (1, 1, 3)]),
-            ["12", "14", "16", "18", "22"],
-            3,
-            "Clara built a tunnel 4 cubes deep with a 5 × 5 outer square and a 3 × 3 opening (fig.1). "
-            "She rearranged the cubes into a tall tower-pyramid (fig.2) consisting of one 5 × 5 base layer, "
-            "two 3 × 3 middle layers, and three single cubes stacked on top. How many cubes from the tunnel did she <i>not</i> use?",
-            "The tunnel has 4 layers of 5×5 - 3×3 = 16 cubes, totaling 4 × 16 = 64 cubes. "
-            "The tower-pyramid uses 25 + (2 × 9) + (3 × 1) = 25 + 18 + 3 = 46 cubes. "
-            "So 64 - 46 = 18 cubes were not used.",
-        ),
-        # Practice .3: Tunnel 4x4 with 2x2 hole, 3 layers deep = 3 * 12 = 36 cubes.
-        # Stepped block (fig.2): 4x4 bottom layer (16) + 2x2 top layer (4) = 20 cubes. Unused = 36 - 20 = 16 (Answer: C)
-        (
-            make_tunnel_cubes(4, 4, 2, 2, 3),
-            make_stepped_pyramid_cubes([(4, 4, 1), (2, 2, 1)]),
-            ["10", "12", "16", "20", "24"],
-            2,
-            "Max made a tunnel 3 cubes deep using a 4 × 4 square frame with a 2 × 2 hole in the center (fig.1). "
-            "Then he built a 2-step pedestal (fig.2) with a 4 × 4 bottom layer (1 cube high) and a 2 × 2 top layer (1 cube high). "
-            "How many cubes from the tunnel were <i>not</i> used?",
-            "Each of the 3 tunnel layers contains 4×4 - 2×2 = 16 - 4 = 12 cubes, so the tunnel has 3 × 12 = 36 cubes in total. "
-            "The 2-step pedestal uses 4×4 + 2×2 = 16 + 4 = 20 cubes. Therefore, 36 - 20 = 16 cubes were not used.",
-        ),
-        # Practice .4: Tunnel 4x4 with 2x2 hole, 4 layers deep = 4 * 12 = 48 cubes.
-        # Stepped pedestal (fig.2): 4x4 bottom layer (16) + two 2x2 layers (8) = 24 cubes. Unused = 48 - 24 = 24 (Answer: E)
-        (
-            make_tunnel_cubes(4, 4, 2, 2, 4),
-            make_stepped_pyramid_cubes([(4, 4, 1), (2, 2, 2)]),
-            ["14", "16", "18", "20", "24"],
-            4,
-            "Zoe built a tunnel 4 cubes deep with a 4 × 4 outer square and a 2 × 2 center hole (fig.1). "
-            "She rearranged some of the cubes into a monument (fig.2) with one 4 × 4 base layer and two 2 × 2 layers on top. "
-            "How many cubes from the tunnel did she <i>not</i> use?",
-            "Each of the 4 layers of the tunnel has 16 - 4 = 12 cubes, giving 4 × 12 = 48 cubes in total. "
-            "The monument uses 16 + 2 × 4 = 24 cubes. Thus, 48 - 24 = 24 cubes were left over.",
-        ),
-    ]
-
-    for idx, (tc, pc, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
+    rng = random.Random(seed)
+    for idx in range(1, num_practice + 1):
+        tc, pc, opts, ans_idx, text, expl = _generate_dynamic_tunnel_pyramid(rng, variant_idx=idx - 1)
         check_tunnel_pyramid(tc, pc, opts, ans_idx)
         fig_p = hstack([
             fig_cube_structure(tc, s=10, label="fig.1"),
@@ -236,16 +246,13 @@ def q_2002_20(d, key, set_num=1, include_orig=True, num_practice=3):
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2002_20
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")
