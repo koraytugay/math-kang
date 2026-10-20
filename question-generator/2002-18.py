@@ -108,8 +108,12 @@ def _generate_dynamic_logic_problem(rng, domain_idx=0):
     dom = DOMAINS[domain_idx % len(DOMAINS)]
     people = list(rng.choice(NAME_QUADS))
     items = list(dom["items"])  # [pair0, pair1, single_item, leftover_item]
-    pair0, pair1, single_it, leftover_it = items[0], items[1], items[2], items[3]
+    # Explicitly locate single_item and leftover_item from dom["items"]
     pair_group = dom["pair_group"]
+    single_it = dom["single_item"]
+    pair_items = [it for it in items if it in pair_group]
+    pair0, pair1 = pair_items[0], pair_items[1]
+    leftover_it = [it for it in items if it not in pair_group and it != single_it][0]
 
     # Shuffle role assignment among the 4 people
     roles = list(people)
