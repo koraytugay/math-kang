@@ -1,33 +1,20 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2002, Problem #10 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
-    option_row,
-    hstack,
-    vstack,
     colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2002, 10)
 
 
@@ -71,24 +58,126 @@ def fig_house_street(first_num, second_num, last_num, target_digit):
         c.line(x, by, x + w - 4, by)
         c.setFillColor(colors.black)
         c.setStrokeColor(colors.black)
+        c.setLineWidth(1)
 
     return w, h, draw
 
 
-def check_digit_occurrences(start_num, end_num, digit, choices, answer_idx, mode="occurrences"):
+def solve_digit_occurrences(start_num, end_num, digit, mode="occurrences"):
     d_str = str(digit)
     if mode == "occurrences":
-        val = sum(str(n).count(d_str) for n in range(start_num, end_num + 1))
+        return sum(str(n).count(d_str) for n in range(start_num, end_num + 1))
     elif mode == "houses_with_digit":
-        val = sum(1 for n in range(start_num, end_num + 1) if d_str in str(n))
-    else:
-        raise ValueError(f"Unknown mode: {mode}")
+        return sum(1 for n in range(start_num, end_num + 1) if d_str in str(n))
+    raise ValueError(f"Unknown mode: {mode}")
+
+
+def check_digit_occurrences(start_num, end_num, digit, choices, answer_idx, mode="occurrences"):
+    val = solve_digit_occurrences(start_num, end_num, digit, mode=mode)
     assert choices[answer_idx] == val, f"Expected {val} at index {answer_idx}, got {choices[answer_idx]}"
     matches = [i for i, ch in enumerate(choices) if ch == val]
     assert matches == [answer_idx], f"Expected unique match at {answer_idx}, got {matches}"
 
 
-def q_2002_10(d, key, set_num=1, include_orig=True, num_practice=5):
+STORY_TEMPLATES = [
+    (
+        "Sophia lives on Maple Street where the houses are numbered sequentially from {s} to {e}. "
+        "How many times does the digit {d} occur in the numbers of those houses?",
+        "houses",
+    ),
+    (
+        "A puzzle booklet has its pages numbered sequentially from {s} to {e}. "
+        "How many times does the digit {d} occur in the page numbers?",
+        "pages",
+    ),
+    (
+        "The lockers in a school hallway are numbered sequentially from {s} to {e}. "
+        "How many times does the digit {d} occur in the numbers of those lockers?",
+        "lockers",
+    ),
+    (
+        "The seats in a theater row are numbered sequentially from {s} to {e}. "
+        "How many times does the digit {d} occur in the numbers of those seats?",
+        "seats",
+    ),
+    (
+        "Noah paints house numbers on all the doors along Oak Avenue, numbered sequentially from {s} to {e}. "
+        "How many times does Noah paint the digit {d}?",
+        "doors",
+    ),
+]
+
+
+def _generate_dynamic_digit_problem(rng, variant_idx=0):
+    """Procedurally generate a sequential digit-counting problem with exact place-value explanation."""
+    digit = rng.randint(1, 8)
+    start_num = 1 if rng.random() < 0.75 else rng.choice([10, 11, 15])
+
+    # Pick end_num so that the double-digit number (11 * digit) is usually inside the range!
+    min_end = max(start_num + 15, 10 * digit + 2)
+    max_end = min(98, max(min_end + 12, 10 * digit + 25))
+    end_num = rng.randint(min_end, max_end)
+
+    d_str = str(digit)
+    use_item_count = (variant_idx % 4 == 3)
+    mode = "houses_with_digit" if use_item_count else "occurrences"
+    ans_val = solve_digit_occurrences(start_num, end_num, digit, mode=mode)
+    other_val = solve_digit_occurrences(
+        start_num, end_num, digit, mode="occurrences" if use_item_count else "houses_with_digit"
+    )
+
+    ones_nums = [n for n in range(start_num, end_num + 1) if n % 10 == digit]
+    tens_nums = [n for n in range(start_num, end_num + 1) if (n // 10) % 10 == digit]
+    matching_nums = [n for n in range(start_num, end_num + 1) if d_str in str(n)]
+
+    if use_item_count:
+        noun = rng.choice(["houses", "lockers", "doors", "pages"])
+        text = (
+            f"Along Cedar Lane, the {noun} are numbered sequentially from {start_num} to {end_num}. "
+            f"How many of those {noun} have the digit {digit} in their number (at least once)?"
+        )
+        nums_str = ", ".join(str(n) for n in matching_nums)
+        expl = (
+            f"The numbers from {start_num} to {end_num} that contain the digit {digit} are: "
+            f"{nums_str}. Counting each number once (even {11 * digit} if present) gives {ans_val} {noun}."
+        )
+    else:
+        tmpl, _ = STORY_TEMPLATES[variant_idx % len(STORY_TEMPLATES)]
+        text = tmpl.format(s=start_num, e=end_num, d=digit)
+        ones_str = ", ".join(str(n) for n in ones_nums)
+        tens_str = (
+            f"{tens_nums[0]} through {tens_nums[-1]}"
+            if len(tens_nums) >= 4
+            else ", ".join(str(n) for n in tens_nums)
+        )
+        expl = (
+            f"In the ones place, the digit {digit} appears in {ones_str} ({len(ones_nums)} times). "
+            + (
+                f"In the tens place, the digit {digit} appears in {tens_str} ({len(tens_nums)} times). "
+                if tens_nums
+                else "It never appears in the tens place. "
+            )
+            + f"In total, the digit {digit} occurs {len(ones_nums)} + {len(tens_nums)} = {ans_val} times"
+            + (f" (counting both {digit}s in {11 * digit})." if (11 * digit) in matching_nums else ".")
+        )
+
+    cands = {ans_val}
+    if other_val > 0 and other_val != ans_val:
+        cands.add(other_val)
+    for delta in [-1, 1, -2, 2, 3, -3, 4]:
+        if len(cands) >= 5:
+            break
+        v = ans_val + delta
+        if v >= 1:
+            cands.add(v)
+    opts = list(cands)[:5]
+    rng.shuffle(opts)
+    ans_idx = opts.index(ans_val)
+    check_digit_occurrences(start_num, end_num, digit, opts, ans_idx, mode=mode)
+    return start_num, end_num, digit, opts, ans_idx, mode, text, expl
+
+
+def q_2002_10(d, key, set_num=1, include_orig=True, num_practice=5, seed=None):
     d.heading(
         f"Problem {set_num}: 2002 #10 - Digit Occurrences in House Numbers",
         "Counting how many times a digit appears across a sequential range of numbers",
@@ -114,55 +203,11 @@ def q_2002_10(d, key, set_num=1, include_orig=True, num_practice=5):
             "Counting every digit 2 gives 1 + 1 + 1 + 1 + 2 + 1 + 1 = 8 times.",
         ))
 
-    practices = [
-        # Practice .1 (Answer: A) 10)
-        (
-            1, 35, 3, [10, 8, 9, 11, 12], 0, "occurrences",
-            "Sophia lives on Maple Street where the houses are numbered sequentially from 1 to 35. "
-            "How many times does the digit 3 occur in the numbers of those houses?",
-            "In the ones place, the digit 3 appears in 3, 13, 23, and 33 (4 times). "
-            "In the tens place, the digit 3 appears in 30, 31, 32, 33, 34, and 35 (6 times). "
-            "In total, the digit 3 occurs 4 + 6 = 10 times (counting both 3s in 33).",
-        ),
-        # Practice .2 (Answer: B) 7)
-        (
-            1, 42, 4, [6, 7, 8, 9, 14], 1, "occurrences",
-            "A puzzle booklet has its pages numbered sequentially from 1 to 42. "
-            "How many times does the digit 4 occur in the page numbers?",
-            "In the ones place, the digit 4 appears in 4, 14, 24, and 34 (4 times). "
-            "In the tens place, the digit 4 appears in 40, 41, and 42 (3 times). "
-            "In total, the digit 4 occurs 4 + 3 = 7 times.",
-        ),
-        # Practice .3 (Answer: D) 13)
-        (
-            1, 29, 1, [11, 12, 14, 13, 15], 3, "occurrences",
-            "The lockers in a school hallway are numbered sequentially from 1 to 29. "
-            "How many times does the digit 1 occur in the numbers of those lockers?",
-            "In the ones place, the digit 1 appears in 1, 11, and 21 (3 times). "
-            "In the tens place, the digit 1 appears in all ten numbers from 10 to 19 (10 times). "
-            "In total, the digit 1 occurs 3 + 10 = 13 times (with 11 contributing two 1s).",
-        ),
-        # Practice .4 (Answer: E) 12)
-        (
-            10, 30, 2, [9, 10, 11, 13, 12], 4, "occurrences",
-            "The seats in a theater row are numbered sequentially from 10 to 30. "
-            "How many times does the digit 2 occur in the numbers of those seats?",
-            "Between 10 and 30, the digit 2 appears in the ones place in 12 and 22 (2 times), "
-            "and in the tens place in every number from 20 to 29 (10 times). "
-            "In total, the digit 2 occurs 2 + 10 = 12 times.",
-        ),
-        # Practice .5 (Answer: A) 12)
-        (
-            1, 55, 5, [12, 10, 11, 13, 15], 0, "occurrences",
-            "Noah paints house numbers on all the doors along Oak Avenue, numbered sequentially from 1 to 55. "
-            "How many times does Noah paint the digit 5?",
-            "In the ones place, the digit 5 appears in 5, 15, 25, 35, 45, and 55 (6 times). "
-            "In the tens place, the digit 5 appears in 50, 51, 52, 53, 54, and 55 (6 times). "
-            "Altogether, Noah paints the digit 5 a total of 6 + 6 = 12 times.",
-        ),
-    ]
-
-    for idx, (s_num, e_num, dig, opts, ans_idx, mode, text, expl) in enumerate(practices[:num_practice], start=1):
+    rng = random.Random(seed)
+    for idx in range(1, num_practice + 1):
+        s_num, e_num, dig, opts, ans_idx, mode, text, expl = _generate_dynamic_digit_problem(
+            rng, variant_idx=idx - 1
+        )
         check_digit_occurrences(s_num, e_num, dig, opts, ans_idx, mode=mode)
         d.problem(
             f"Practice {set_num}.{idx}",
@@ -174,16 +219,13 @@ def q_2002_10(d, key, set_num=1, include_orig=True, num_practice=5):
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2002_10
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")

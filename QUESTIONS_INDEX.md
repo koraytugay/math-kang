@@ -29,7 +29,7 @@ This file tracks all Math Kangaroo contest questions that have a dedicated, cust
 | **2002 #6** | `2002:6` | `question-generator/2002-6.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Square & Rectangle Perimeters** — Comparing perimeter of square $ABCD$ and rectangle $AMTD$ |
 | **2002 #7** | `2002:7` | `question-generator/2002-7.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Castle Skyline Contour** — Matching contour segments to a castle silhouette |
 | **2002 #9** | `2002:9` | `question-generator/2002-9.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Two-Pan Balance Scale** — Finding the weight of one fruit from tilted/balanced scales |
-| **2002 #10** | `2002:10` | `question-generator/2002-10.py` | `argon` | 5 | **Digit Occurrences** — Counting how many times a digit occurs in sequential house/page numbers |
+| **2002 #10** | `2002:10` | `question-generator/2002-10.py` | `argon` (reviewed high effort, dynamic) | Dynamic (unlimited) | **Digit Occurrences** — Counting how many times a digit occurs in sequential house/page numbers |
 | **2002 #11** | `2002:11` | `question-generator/2002-11.py` | `argon` | 5 | **Cracked Clock Face** — Partitioning clock face `1–12` (sum = 78) into pieces with consecutive/target sums |
 | **2002 #12** | `2002:12` | `question-generator/2002-12.py` | `argon` | 5 | **Kangaroo Zigzag Run** — Comparing total grid-segment path lengths of 3 runners on a dashed grid |
 | **2002 #15** | `2002:15` | `question-generator/2002-15.py` | `argon` | 4 | **Flag Silhouette in the Wind** — Identifying which flag silhouette is impossible unless torn from the pole |
