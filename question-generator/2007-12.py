@@ -1,60 +1,140 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2007, Problem #12 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
+from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
     NUM_WORDS,
-    Doc,
-    option_row,
-    hstack,
-    vstack,
-    colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2007, 12)
 
+MONTH_NAMES = {
+    1: "January",
+    2: "February",
+    3: "March",
+    4: "April",
+    5: "May",
+    6: "June",
+    7: "July",
+    8: "August",
+    9: "September",
+    10: "October",
+    11: "November",
+    12: "December",
+}
 
-def check_birthday_offset(base_date_tuple, rel, years_diff, days_diff, choices_tuples, ans_idx):
-    from datetime import date, timedelta
+
+def format_date_tuple(dt_tuple):
+    y, m, d_num = dt_tuple
+    return f"{MONTH_NAMES[m]} {d_num}, {y}"
+
+
+def _shift_date(base_date_tuple, sign_y, years_diff, sign_d, days_diff):
     y, m, day = base_date_tuple
-    # Shift by years first, then days
-    # rel == "older": base person is older than target -> target was born LATER (+years, +days)
-    # rel == "younger": base person is younger than target -> target was born EARLIER (-years, -days)
-    if rel == "older":
-        mid = date(y + years_diff, m, day)
-        res = mid + timedelta(days=days_diff)
-    else:
-        mid = date(y - years_diff, m, day)
-        res = mid - timedelta(days=days_diff)
-    res_tuple = (res.year, res.month, res.day)
+    mid = date(y + sign_y * years_diff, m, day)
+    res = mid + timedelta(days=sign_d * days_diff)
+    return (res.year, res.month, res.day)
+
+
+def check_birthday_offset(base_date_tuple, rel, years_diff, days_diff, choices_tuples, opts_str, ans_idx):
+    sign = 1 if rel == "older" else -1
+    res_tuple = _shift_date(base_date_tuple, sign, years_diff, sign, days_diff)
+    assert [format_date_tuple(ct) for ct in choices_tuples] == list(opts_str)
     matches = [i for i, ct in enumerate(choices_tuples) if ct == res_tuple]
     assert matches == [ans_idx], f"Birthday offset got {res_tuple}, choices={choices_tuples}, ans_idx={ans_idx}"
 
 
-def q_2007_12(d, key, set_num=1, include_orig=True, num_practice=3):
+NAME_PAIRS = [
+    ("Clara", "Leo"),
+    ("Max", "Nina"),
+    ("Sophia", "Ethan"),
+    ("Lucas", "Maya"),
+    ("Anna", "Ben"),
+    ("Noah", "Elena"),
+    ("Sam", "Zoe"),
+    ("Iris", "Jack"),
+]
+
+BOUNDARY_MONTH_DAYS = [
+    (1, 1),
+    (12, 31),
+    (5, 1),
+    (7, 31),
+    (10, 1),
+    (8, 31),
+]
+
+
+def _generate_dynamic_birthday_problem(rng, mode_idx=0):
+    """Procedurally generate a calendar birthday offset problem across month/year boundaries."""
+    p1, p2 = rng.choice(NAME_PAIRS)
+    rel = "older" if mode_idx % 2 == 0 else "younger"
+    sign = 1 if rel == "older" else -1
+
+    while True:
+        yr = rng.randint(2008, 2020)
+        m, day = rng.choice(BOUNDARY_MONTH_DAYS)
+        yd = rng.choice([1, 2, 3])
+        dd = rng.choice([1, 2, 3])
+        if (yr, m, day, rel, yd, dd) != (2002, 1, 1, "older", 1, 1):
+            break
+
+    base_dt = (yr, m, day)
+    correct_dt = _shift_date(base_dt, sign, yd, sign, dd)
+    mid_dt = (yr + sign * yd, m, day)
+
+    # Classic sign/rollover trap distractors
+    trap1 = _shift_date(base_dt, -sign, yd, -sign, dd)
+    trap2 = _shift_date(base_dt, sign, yd, -sign, dd)
+    trap3 = _shift_date(base_dt, -sign, yd, sign, dd)
+    trap4 = (correct_dt[0] + 1, correct_dt[1], correct_dt[2])
+    trap5 = (correct_dt[0] - 1, correct_dt[1], correct_dt[2])
+
+    cands = [correct_dt]
+    for t in [trap1, trap2, trap3, trap4, trap5]:
+        if len(cands) >= 5:
+            break
+        if t not in cands:
+            cands.append(t)
+
+    rng.shuffle(cands)
+    ans_idx = cands.index(correct_dt)
+    opts_str = [format_date_tuple(ct) for ct in cands]
+    check_birthday_offset(base_dt, rel, yd, dd, cands, opts_str, ans_idx)
+
+    y_phrase = "one year" if yd == 1 else f"{NUM_WORDS[yd]} years"
+    d_phrase = "one day" if dd == 1 else f"{NUM_WORDS[dd]} days"
+    dir_word = "AFTER" if rel == "older" else "BEFORE"
+    opp_rel = "younger" if rel == "older" else "older"
+
+    text = (
+        f"{p1}, who is <b>{rel}</b> than {p2} by {y_phrase} and {d_phrase}, was born on "
+        f"{format_date_tuple(base_dt)}. What is the date of {p2}'s birthday?"
+    )
+    expl = (
+        f"Since {p1} is {rel} than {p2}, {p2} is {opp_rel} and was born {y_phrase} and {d_phrase} {dir_word} "
+        f"{format_date_tuple(base_dt)}. Shifting by {y_phrase} gives {format_date_tuple(mid_dt)}, and "
+        f"{d_phrase} {dir_word.lower()} that is {format_date_tuple(correct_dt)}."
+    )
+    return base_dt, rel, yd, dd, cands, opts_str, ans_idx, text, expl
+
+
+def q_2007_12(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Calendar & Birthday Date Reasoning", "Based on 2007, Problem 12")
 
-    # Original 2007 #12: Basil (born Jan 1, 2002) is older than Peter by 1 year and 1 day -> Peter born Jan 2, 2003 (A)
     c_tuples0 = [(2003, 1, 2), (2001, 1, 2), (2000, 12, 31), (2002, 12, 31), (2003, 12, 31)]
     opts0 = ["January 2, 2003", "January 2, 2001", "December 31, 2000", "December 31, 2002", "December 31, 2003"]
-    check_birthday_offset((2002, 1, 1), "older", 1, 1, c_tuples0, 0)
+    check_birthday_offset((2002, 1, 1), "older", 1, 1, c_tuples0, opts0, 0)
     if include_orig:
         d.problem(
             "Original 2007 #12.",
@@ -70,55 +150,13 @@ def q_2007_12(d, key, set_num=1, include_orig=True, num_practice=3):
             "One year after January 1, 2002 is January 1, 2003, and one day after that is January 2, 2003.",
         ))
 
-    practices = [
-        # Practice .1: Clara (born Jan 1, 2015) is YOUNGER than Leo by 1 year and 1 day -> Leo born 1 yr 1 day BEFORE Jan 1, 2015 = Dec 31, 2013 (Answer: C)
-        (
-            (2015, 1, 1), "younger", 1, 1,
-            [(2016, 1, 2), (2014, 1, 2), (2013, 12, 31), (2014, 12, 31), (2016, 12, 31)],
-            ["January 2, 2016", "January 2, 2014", "December 31, 2013", "December 31, 2014", "December 31, 2016"],
-            2,
-            "Clara, who is <b>younger</b> than Leo by one year and one day, was born on January 1, 2015. "
-            "What is the date of Leo's birthday?",
-            "Because Clara is younger than Leo, Leo is older and was born 1 year and 1 day BEFORE Clara. "
-            "One year before January 1, 2015 is January 1, 2014, and one day before that is December 31, 2013.",
-        ),
-        # Practice .2: Max (born Dec 31, 2010) is OLDER than Nina by 1 year and 2 days -> Nina born 1 yr 2 days AFTER Dec 31, 2010 = Jan 2, 2012 (Answer: B)
-        (
-            (2010, 12, 31), "older", 1, 2,
-            [(2011, 1, 2), (2012, 1, 2), (2009, 12, 29), (2011, 12, 29), (2012, 1, 1)],
-            ["January 2, 2011", "January 2, 2012", "December 29, 2009", "December 29, 2011", "January 1, 2012"],
-            1,
-            "Max, who is <b>older</b> than Nina by one year and two days, was born on December 31, 2010. "
-            "What is the date of Nina's birthday?",
-            "Since Max is older than Nina, Nina was born 1 year and 2 days AFTER December 31, 2010. "
-            "One year later is December 31, 2011, and two days after that is January 2, 2012.",
-        ),
-        # Practice .3: Sophia (born May 1, 2014) is YOUNGER than Ethan by 2 years and 1 day -> Ethan born 2 yrs 1 day BEFORE May 1, 2014 = April 30, 2012 (Answer: D)
-        (
-            (2014, 5, 1), "younger", 2, 1,
-            [(2016, 5, 2), (2012, 5, 2), (2012, 4, 31) if False else (2016, 4, 30), (2012, 4, 30), (2013, 4, 30)],
-            ["May 2, 2016", "May 2, 2012", "April 30, 2016", "April 30, 2012", "April 30, 2013"],
-            3,
-            "Sophia, who is <b>younger</b> than Ethan by two years and one day, was born on May 1, 2014. "
-            "What is the date of Ethan's birthday?",
-            "Since Sophia is younger than Ethan, Ethan was born 2 years and 1 day BEFORE May 1, 2014. "
-            "Two years before May 1, 2014 is May 1, 2012, and one day before May 1, 2012 is April 30, 2012.",
-        ),
-        # Practice .4: Lucas (born Jan 1, 2018) is OLDER than Maya by 2 years and 3 days -> Maya born Jan 4, 2020 (Answer: E)
-        (
-            (2018, 1, 1), "older", 2, 3,
-            [(2015, 12, 29), (2016, 1, 4), (2019, 1, 4), (2020, 12, 29), (2020, 1, 4)],
-            ["December 29, 2015", "January 4, 2016", "January 4, 2019", "December 29, 2020", "January 4, 2020"],
-            4,
-            "Lucas, who is <b>older</b> than Maya by two years and three days, was born on January 1, 2018. "
-            "What is the date of Maya's birthday?",
-            "Because Lucas is older, Maya was born 2 years and 3 days AFTER January 1, 2018. "
-            "Two years after January 1, 2018 is January 1, 2020, and 3 days later is January 4, 2020.",
-        ),
-    ]
-
-    for idx, (b_date, rel, yd, dd, c_tups, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
-        check_birthday_offset(b_date, rel, yd, dd, c_tups, ans_idx)
+    rng = random.Random(seed)
+    modes = [0, 1, 2, 3]
+    rng.shuffle(modes)
+    for idx in range(1, num_practice + 1):
+        m = modes[(idx - 1) % len(modes)]
+        b_date, rel, yd, dd, c_tups, opts, ans_idx, text, expl = _generate_dynamic_birthday_problem(rng, mode_idx=m)
+        check_birthday_offset(b_date, rel, yd, dd, c_tups, opts, ans_idx)
         d.problem(
             f"Practice {set_num}.{idx}",
             text,
@@ -127,16 +165,13 @@ def q_2007_12(d, key, set_num=1, include_orig=True, num_practice=3):
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2007_12
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")
