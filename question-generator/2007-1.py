@@ -1,33 +1,20 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2007, Problem #1 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
-    option_row,
-    hstack,
-    vstack,
     colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2007, 1)
 
 
@@ -39,10 +26,13 @@ def valid_fork_groups(forks):
     return set(res)
 
 
-def check_fork_road(forks, option_tuples, answer_idx):
+def check_fork_road(forks, option_tuples, answer_idx, mode="valid"):
     valid = valid_fork_groups(forks)
-    good = [i for i, opt in enumerate(option_tuples) if tuple(opt) in valid]
-    assert good == [answer_idx], (forks, good, answer_idx)
+    if mode == "valid":
+        good = [i for i, opt in enumerate(option_tuples) if tuple(opt) in valid]
+    else:
+        good = [i for i, opt in enumerate(option_tuples) if tuple(opt) not in valid]
+    assert good == [answer_idx], (forks, good, answer_idx, mode)
 
 
 def fig_fork_road(forks):
@@ -85,29 +75,24 @@ def fig_fork_road(forks):
         cx = rx + lead_w
 
         for branch in forks:
-            # Outer boundary curves (top and bottom of road)
             f_len = 66
             s_len = seg_w - f_len
             mid = cx + f_len / 2
             end = cx + f_len
 
-            # Top outer & inner walls of upper branch, bottom outer & inner walls of lower branch
             for sign in (+1, -1):
-                # Outer wall: from cy + sign*rh up to cy + sign*(bh + 4.5) and back
                 p_out = c.beginPath()
                 p_out.moveTo(cx, cy + sign * rh)
                 p_out.curveTo(cx + 16, cy + sign * rh, mid - 14, cy + sign * (bh + 4.5), mid, cy + sign * (bh + 4.5))
                 p_out.curveTo(mid + 14, cy + sign * (bh + 4.5), end - 16, cy + sign * rh, end, cy + sign * rh)
                 c.drawPath(p_out, stroke=1, fill=0)
 
-                # Inner island wall: from (cx + 7, cy) to (mid, cy + sign*(bh - 4.5)) to (end - 7, cy)
                 p_in = c.beginPath()
                 p_in.moveTo(cx + 7, cy)
                 p_in.curveTo(cx + 18, cy + sign * 2, mid - 12, cy + sign * (bh - 4.5), mid, cy + sign * (bh - 4.5))
                 p_in.curveTo(mid + 12, cy + sign * (bh - 4.5), end - 18, cy + sign * 2, end - 7, cy)
                 c.drawPath(p_in, stroke=1, fill=0)
 
-            # White label boxes and bold labels at top (branch[0]) and bottom (branch[1])
             for idx_b, sign in ((0, +1), (1, -1)):
                 ly = cy + sign * bh
                 c.setFillColor(colors.white)
@@ -116,25 +101,148 @@ def fig_fork_road(forks):
                 c.setFont("Helvetica-Bold", 10)
                 c.drawCentredString(mid, ly - 3.5, str(branch[idx_b]))
 
-            # Straight connector to next fork
             c.line(end, cy + rh, end + s_len, cy + rh)
             c.line(end, cy - rh, end + s_len, cy - rh)
             cx = end + s_len
 
         c.setFillColor(colors.black)
         c.setStrokeColor(colors.black)
+        c.setLineWidth(1)
 
     return W, H, draw
 
 
-def q_2007_1(d, key, set_num=1, include_orig=True):
+def _make_invalid_fork_triples(forks):
+    """Build plausible invalid triples that pick both labels from one fork and one label from another."""
+    (a1, b1), (a2, b2), (a3, b3) = forks
+    return [
+        (a1, b1, a2),
+        (a1, b1, b3),
+        (b1, a2, b2),
+        (a1, a3, b3),
+        (a2, b2, a3),
+        (a2, b2, b3),
+        (b1, a3, b3),
+        (a1, b1, a3),
+    ]
+
+
+NAMES = ["Leo", "Mia", "Sam", "Nora", "Alex", "Clara", "Max", "Elena"]
+
+
+def _generate_dynamic_fork_problem(rng, mode_idx=0):
+    """Procedurally generate a road-fork problem across 4 modes."""
+    actor = rng.choice(NAMES)
+    m = mode_idx % 4
+
+    if m == 0:
+        # Mode 0: 3 forks with randomized numbers -> which group COULD be written?
+        nums = rng.sample(range(1, 10), 6)
+        forks = [(nums[0], nums[1]), (nums[2], nums[3]), (nums[4], nums[5])]
+        valid_list = sorted(list(valid_fork_groups(forks)))
+        good_triple = rng.choice(valid_list)
+        bad_cands = _make_invalid_fork_triples(forks)
+        rng.shuffle(bad_cands)
+        all_triples = bad_cands[:4] + [good_triple]
+        rng.shuffle(all_triples)
+        ans_idx = all_triples.index(good_triple)
+        check_fork_road(forks, all_triples, ans_idx, mode="valid")
+        opts = [f"{a}, {b} and {c}" for a, b, c in all_triples]
+        text = (
+            f"{actor} walked from the left to the right along the roads and wrote down the three numbers passed. "
+            f"Which group of numbers could {actor} have written?"
+        )
+        expl = (
+            f"{actor} must pick one number from {forks[0]}, one from {forks[1]}, and one from {forks[2]}. "
+            f"Only ({good_triple[0]}, {good_triple[1]} and {good_triple[2]}) picks one from each fork."
+        )
+        return forks, opts, 3, ans_idx, text, expl
+
+    elif m == 1:
+        # Mode 1: 3 forks with letters -> which three letters COULD be written?
+        pool = list("ABCDEFGHKLMNP")
+        lets = rng.sample(pool, 6)
+        forks = [(lets[0], lets[1]), (lets[2], lets[3]), (lets[4], lets[5])]
+        valid_list = sorted(list(valid_fork_groups(forks)))
+        good_triple = rng.choice(valid_list)
+        bad_cands = _make_invalid_fork_triples(forks)
+        rng.shuffle(bad_cands)
+        all_triples = bad_cands[:4] + [good_triple]
+        rng.shuffle(all_triples)
+        ans_idx = all_triples.index(good_triple)
+        check_fork_road(forks, all_triples, ans_idx, mode="valid")
+        opts = [f"{a}, {b} and {c}" for a, b, c in all_triples]
+        text = (
+            f"{actor} walked from left to right and wrote down the letters passed along the path. "
+            f"Which three letters could {actor} have written?"
+        )
+        expl = (
+            f"{actor} picks one letter from ({forks[0][0]}, {forks[0][1]}), one from ({forks[1][0]}, {forks[1][1]}), "
+            f"and one from ({forks[2][0]}, {forks[2][1]}). Only ({good_triple[0]}, {good_triple[1]} and {good_triple[2]}) "
+            f"has one letter from each fork."
+        )
+        return forks, opts, 3, ans_idx, text, expl
+
+    elif m == 2:
+        # Mode 2: 3 forks with numbers -> which group CANNOT be written?
+        nums = rng.sample(range(1, 10), 6)
+        forks = [(nums[0], nums[1]), (nums[2], nums[3]), (nums[4], nums[5])]
+        valid_list = list(valid_fork_groups(forks))
+        rng.shuffle(valid_list)
+        bad_triple = rng.choice(_make_invalid_fork_triples(forks))
+        all_triples = valid_list[:4] + [bad_triple]
+        rng.shuffle(all_triples)
+        ans_idx = all_triples.index(bad_triple)
+        check_fork_road(forks, all_triples, ans_idx, mode="invalid")
+        opts = [f"{a}, {b} and {c}" for a, b, c in all_triples]
+        text = (
+            f"{actor} walked from left to right along the road and wrote down the three numbers passed. "
+            f"Which of the following groups of numbers could <b>not</b> have been written by {actor}?"
+        )
+        expl = (
+            f"At each of the three forks {forks[0]}, {forks[1]}, and {forks[2]}, {actor} can only take one branch. "
+            f"Group ({bad_triple[0]}, {bad_triple[1]} and {bad_triple[2]}) takes both branches of the same fork, "
+            f"so it is impossible."
+        )
+        return forks, opts, 3, ans_idx, text, expl
+
+    else:
+        # Mode 3: Sum of the 3 numbers passed along the road
+        for _ in range(300):
+            nums = rng.sample(range(1, 10), 6)
+            forks = [(nums[0], nums[1]), (nums[2], nums[3]), (nums[4], nums[5])]
+            triples = list(valid_fork_groups(forks))
+            valid_sums = {a + b + c for a, b, c in triples}
+            lo, hi = min(valid_sums), max(valid_sums)
+            invalid_sums = [s for s in range(max(3, lo - 2), hi + 3) if s not in valid_sums]
+            if len(invalid_sums) >= 4:
+                good_triple = rng.choice(triples)
+                good_sum = sum(good_triple)
+                rng.shuffle(invalid_sums)
+                sum_choices = sorted(invalid_sums[:4] + [good_sum])
+                ans_idx = sum_choices.index(good_sum)
+                assert [i for i, s in enumerate(sum_choices) if s in valid_sums] == [ans_idx]
+                text = (
+                    f"{actor} walked from left to right and <b>added up</b> the three numbers passed along the road. "
+                    f"Which of the following could be {actor}'s total?"
+                )
+                sums_sorted_str = ", ".join(str(s) for s in sorted(valid_sums))
+                expl = (
+                    f"The possible sums from picking one number per fork are {{{sums_sorted_str}}}. "
+                    f"Among the choices, only {good_sum} is possible (for example, "
+                    f"{good_triple[0]} + {good_triple[1]} + {good_triple[2]} = {good_sum})."
+                )
+                return forks, [str(s) for s in sum_choices], 5, ans_idx, text, expl
+        raise RuntimeError("Failed to generate fork sum problem")
+
+
+def q_2007_1(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Choosing paths along a road", "Based on 2007, Problem 1")
 
-    # Original 2007 #1
     if include_orig:
         forks = [(1, 2), (3, 4), (5, 6)]
         opts = [(1, 2, 4), (2, 3, 4), (2, 3, 5), (1, 5, 6), (1, 2, 5)]
-        check_fork_road(forks, opts, 2)
+        check_fork_road(forks, opts, 2, mode="valid")
         d.problem(
             "Original 2007 #1.",
             "Zita walked from the left to the right and wrote the numbers she saw along the roads in her "
@@ -150,75 +258,29 @@ def q_2007_1(d, key, set_num=1, include_orig=True):
             "At the 1st fork Zita picks 1 or 2; at the 2nd fork 3 or 4; at the 3rd fork 5 or 6. Only (2, 3 and 5) has one from each fork.",
         ))
 
-    # Practice .1
-    forks1 = [(1, 2), (3, 4), (5, 6)]
-    opts1 = [(1, 2, 3), (1, 4, 6), (2, 3, 4), (1, 5, 6), (3, 4, 5)]
-    check_fork_road(forks1, opts1, 1)
-    d.problem(
-        f"Practice {set_num}.1",
-        "Leo walked from the left to the right along the roads and wrote down the three numbers he passed. "
-        "Which group of numbers could Leo have written?",
-        fig_fork_road(forks1),
-        "below",
-        [f"{a}, {b} and {c}" for a, b, c in opts1],
-        choice_cols=3,
-    )
-    key.append((
-        f"{set_num}.1",
-        "B",
-        "Leo must pick one from (1, 2), one from (3, 4), and one from (5, 6). Only (1, 4 and 6) picks one from each fork.",
-    ))
+    rng = random.Random(seed)
+    modes = [0, 1, 2, 3]
+    rng.shuffle(modes)
+    for idx in range(1, num_practice + 1):
+        m = modes[(idx - 1) % len(modes)]
+        forks, opts, cols, ans_idx, text, expl = _generate_dynamic_fork_problem(rng, mode_idx=m)
+        d.problem(
+            f"Practice {set_num}.{idx}",
+            text,
+            fig_fork_road(forks),
+            "below",
+            opts,
+            choice_cols=cols,
+        )
+        key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
-    # Practice .2 (letters on the forks)
-    forks2 = [("A", "B"), ("C", "D"), ("E", "F")]
-    opts2 = [("A", "B", "E"), ("B", "C", "D"), ("A", "E", "F"), ("B", "D", "E"), ("C", "D", "F")]
-    check_fork_road(forks2, opts2, 3)
-    d.problem(
-        f"Practice {set_num}.2",
-        "Mia walked from left to right and wrote down the letters she passed along her path. "
-        "Which three letters could Mia have written?",
-        fig_fork_road(forks2),
-        "below",
-        [f"{a}, {b} and {c}" for a, b, c in opts2],
-        choice_cols=3,
-    )
-    key.append((
-        f"{set_num}.2",
-        "D",
-        "Mia picks A or B first, then C or D, then E or F. Only (B, D and E) has one letter from each fork.",
-    ))
-
-    # Practice .3 (twist: sum of the numbers along the road)
-    forks3 = [(2, 5), (3, 6), (4, 8)]
-    valid_sums = {a + b + c for a, b, c in valid_fork_groups(forks3)}  # {9, 13, 12, 16, 15, 19}
-    sum_choices = [10, 11, 14, 16, 20]
-    good_sums = [i for i, s in enumerate(sum_choices) if s in valid_sums]
-    assert good_sums == [3], (valid_sums, good_sums)
-    d.problem(
-        f"Practice {set_num}.3",
-        "Sam walked from left to right and <b>added up</b> the three numbers he passed along his road. "
-        "Which of the following could be Sam's total?",
-        fig_fork_road(forks3),
-        "below",
-        sum_choices,
-        choice_cols=5,
-    )
-    key.append((
-        f"{set_num}.3",
-        "D",
-        "Possible sums are 2+3+4=9, 2+6+4=12, 5+3+4=12, 2+3+8=13, 5+6+4=15, 2+6+8=16, 5+3+8=16, 5+6+8=19. From the choices, only 16 is possible (for example 2 + 6 + 8 = 16).",
-    ))
 
 GENERATE = q_2007_1
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")
