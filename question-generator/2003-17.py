@@ -1,75 +1,172 @@
 # Model: argon
+# Reviewed by argon on high effort (dynamic procedural generator)
 """Math Kangaroo 2003, Problem #17 - Question Generator."""
 import os
 import sys
-import math
-import itertools
+import random
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (
-    PW,
-    PH,
-    ML,
-    MR,
-    MT,
-    MB,
-    TW,
     LETTERS,
-    DARK,
-    GRAY,
-    BODY,
-    NUM_WORDS,
-    Doc,
-    option_row,
-    hstack,
-    vstack,
     colors,
     _ProblemCollector,
 )
 
 MODEL = "argon"
+REVIEWED_BY = "argon (high effort)"
+DYNAMIC = True
 QUESTION_ID = (2003, 17)
 
 
-def fig_barcode():
-    w, h = 88, 36
+def fig_barcode(left_pat=("W", "N", "W"), right_pat=("N", "W", "W")):
+    w, h = 92, 36
 
     def draw(c, x, y):
         c.setFillColor(colors.black)
         c.setStrokeColor(colors.black)
-        # Left group: wide, narrow, wide
-        c.rect(x + 4, y + 4, 6, 28, stroke=0, fill=1)
-        c.rect(x + 15, y + 4, 2.2, 28, stroke=0, fill=1)
-        c.rect(x + 22, y + 4, 6, 28, stroke=0, fill=1)
-        # Dots in middle
+        cx = x + 4
+        for b in left_pat:
+            bw = 5.8 if b == "W" else 2.2
+            c.rect(cx, y + 4, bw, 28, stroke=0, fill=1)
+            cx += bw + 4.5
         c.setFont("Helvetica-Bold", 11)
-        c.drawCentredString(x + 41, y + 16, ". . . . .")
-        # Right group: narrow, wide, wide
-        c.rect(x + 56, y + 4, 2.2, 28, stroke=0, fill=1)
-        c.rect(x + 63, y + 4, 6, 28, stroke=0, fill=1)
-        c.rect(x + 74, y + 4, 6, 28, stroke=0, fill=1)
+        c.drawCentredString(x + 45, y + 16, ". . . . .")
+        cx = x + 58
+        for b in right_pat:
+            bw = 5.8 if b == "W" else 2.2
+            c.rect(cx, y + 4, bw, 28, stroke=0, fill=1)
+            cx += bw + 4.5
         c.setFillColor(colors.black)
         c.setStrokeColor(colors.black)
+        c.setLineWidth(1)
 
     return w, h, draw
 
 
-def check_barcode(total_bars, white_minus_wide, choices, ans_idx):
+def solve_barcode(total_bars, n_wide, n_narrow):
+    """Exact verification of an alternating black/white barcode starting and ending with black."""
+    assert n_wide > 0 and n_narrow > 0
+    n_black = n_wide + n_narrow
+    n_white = n_black - 1
+    assert total_bars == n_black + n_white, f"Total bars mismatch: {total_bars} != {n_black} + {n_white}"
+    return n_black, n_white
+
+
+def check_barcode(total_bars, white_minus_wide, choices, ans_idx, query="narrow"):
     assert total_bars % 2 == 1, "Total bars must be odd when starting and ending with black"
     n_black = (total_bars + 1) // 2
     n_white = (total_bars - 1) // 2
     n_wide = n_white - white_minus_wide
     n_narrow = n_black - n_wide
-    assert n_wide > 0 and n_narrow > 0
-    matches = [i for i, ch in enumerate(choices) if int(ch) == n_narrow]
-    assert matches == [ans_idx], f"Barcode narrow={n_narrow}, choices={choices}, ans_idx={ans_idx}"
+    solve_barcode(total_bars, n_wide, n_narrow)
+    target = {"narrow": n_narrow, "wide": n_wide, "total": total_bars}[query]
+    matches = [i for i, ch in enumerate(choices) if int(ch) == target]
+    assert matches == [ans_idx], f"Barcode target={target}, choices={choices}, ans_idx={ans_idx}"
 
 
-def q_2003_17(d, key, set_num=1, include_orig=True, num_practice=3):
+CONTEXT_NOUNS = [
+    "A product bar code",
+    "A library label bar code",
+    "A train ticket bar code",
+    "A parcel bar code",
+    "A badge bar code",
+]
+
+
+def _generate_dynamic_barcode_problem(rng, mode=0):
+    """Procedurally generate an alternating black-and-white barcode problem."""
+    ctx = rng.choice(CONTEXT_NOUNS)
+    left_pat = tuple(rng.choice(["W", "N"]) for _ in range(3))
+    right_pat = tuple(rng.choice(["W", "N"]) for _ in range(3))
+    m = mode % 3
+
+    if m == 0:
+        # Mode 0: Given total_bars and (n_white - n_wide), find n_narrow
+        while True:
+            n_black = rng.randint(8, 16)
+            total_bars = 2 * n_black - 1
+            n_white = n_black - 1
+            diff_w = rng.randint(1, n_white - 2)
+            if (total_bars, diff_w) != (17, 3):
+                break
+        n_wide = n_white - diff_w
+        n_narrow = n_black - n_wide
+        query = "narrow"
+        ans_val = n_narrow
+        text = (
+            f"{ctx} is formed using {total_bars} alternating black and white bars (the first and last bars are black). "
+            f"Each black bar is either wide or narrow. The number of white bars is {diff_w} more than the number of "
+            f"wide black bars. How many <b>narrow black bars</b> are there?"
+        )
+        expl = (
+            f"Out of {total_bars} alternating bars starting and ending with black, there are {n_black} black bars "
+            f"and {n_white} white bars. Since {n_white} white bars is {diff_w} more than the wide black bars, "
+            f"there are {n_white} - {diff_w} = {n_wide} wide black bars, leaving {n_black} - {n_wide} = {n_narrow} narrow black bars."
+        )
+    elif m == 1:
+        # Mode 1: Given total_bars and (n_white - n_wide), ask for n_wide (or give n_white - n_narrow and ask for n_narrow)
+        n_black = rng.randint(8, 15)
+        total_bars = 2 * n_black - 1
+        n_white = n_black - 1
+        diff_n = rng.randint(2, n_white - 2)
+        n_narrow = n_white - diff_n
+        n_wide = n_black - n_narrow
+        diff_w = n_white - n_wide
+        query = "narrow"
+        ans_val = n_narrow
+        text = (
+            f"{ctx} has {total_bars} alternating black and white bars, where the first and last bars are black. "
+            f"Every black bar is either wide or narrow. If there are {n_wide} wide black bars, how many "
+            f"<b>narrow black bars</b> are in the bar code?"
+        )
+        expl = (
+            f"Among {total_bars} alternating bars starting and ending with black, there are ({total_bars} + 1) ÷ 2 = "
+            f"{n_black} black bars and {n_white} white bars. Since {n_wide} of the black bars are wide, "
+            f"the remaining {n_black} - {n_wide} = {n_narrow} black bars are narrow."
+        )
+    else:
+        # Mode 2: Given n_wide and n_narrow black bars, find total bars (black + white) in the barcode
+        n_wide = rng.randint(4, 9)
+        n_narrow = rng.randint(3, 8)
+        n_black = n_wide + n_narrow
+        n_white = n_black - 1
+        total_bars = n_black + n_white
+        diff_w = n_white - n_wide
+        query = "total"
+        ans_val = total_bars
+        text = (
+            f"{ctx} is made of alternating black and white bars, starting and ending with a black bar. "
+            f"It contains {n_wide} wide black bars and {n_narrow} narrow black bars. "
+            f"How many bars (black and white altogether) are in the bar code?"
+        )
+        expl = (
+            f"There are {n_wide} + {n_narrow} = {n_black} black bars in total. Because the bars alternate and both "
+            f"the first and last bars are black, there is 1 fewer white bar than black bars: {n_black} - 1 = {n_white} "
+            f"white bars. Altogether there are {n_black} + {n_white} = {total_bars} bars."
+        )
+
+    cands = {ans_val}
+    for delta in [-2, -1, 1, 2, 3, -3, 4]:
+        if len(cands) >= 5:
+            break
+        v = ans_val + delta
+        if v >= 1:
+            cands.add(v)
+    vals = sorted(list(cands))[:5]
+    if ans_val not in vals:
+        vals[-1] = ans_val
+        vals.sort()
+    opts = [str(v) for v in vals]
+    ans_idx = vals.index(ans_val)
+    check_barcode(total_bars, diff_w, opts, ans_idx, query=query)
+    return total_bars, diff_w, opts, ans_idx, query, left_pat, right_pat, text, expl
+
+
+def q_2003_17(d, key, set_num=1, include_orig=True, num_practice=3, seed=None):
     d.heading(f"Set {set_num} - Alternating Black & White Barcode", "Based on 2003, Problem 17")
 
     opts0 = ["1", "2", "3", "4", "5"]
-    check_barcode(17, 3, opts0, 3)
+    check_barcode(17, 3, opts0, 3, query="narrow")
     if include_orig:
         d.problem(
             "Original 2003 #17.",
@@ -88,75 +185,29 @@ def q_2003_17(d, key, set_num=1, include_orig=True, num_practice=3):
             "so there are 8 - 3 = 5 wide black bars. That leaves 9 - 5 = 4 narrow black bars.",
         ))
 
-    practices = [
-        # Practice .1: 21 total bars -> 11 black, 10 white. White is 4 more than wide black -> wide = 6, narrow = 11 - 6 = 5 (Answer: E)
-        (
-            21, 4,
-            ["1", "2", "3", "4", "5"],
-            4,
-            "A bar code is made of 21 alternating black and white bars, starting and ending with a black bar. "
-            "Each black bar is either wide or narrow. The number of white bars is 4 more than the number of wide "
-            "black bars. How many narrow black bars are there?",
-            "Out of 21 alternating bars starting and ending with black, there are 11 black bars and 10 white bars. "
-            "Since 10 white bars is 4 more than the wide black bars, there are 10 - 4 = 6 wide black bars, "
-            "leaving 11 - 6 = 5 narrow black bars.",
-        ),
-        # Practice .2: 19 total bars -> 10 black, 9 white. White is 2 more than wide black -> wide = 7, narrow = 10 - 7 = 3 (Answer: C)
-        (
-            19, 2,
-            ["1", "2", "3", "4", "5"],
-            2,
-            "A label has a bar code of 19 alternating black and white bars (both the first and last bars are black). "
-            "The number of white bars is 2 more than the number of wide black bars. "
-            "How many narrow black bars are in the bar code?",
-            "With 19 alternating bars beginning and ending with black, there are 10 black bars and 9 white bars. "
-            "There are 9 - 2 = 7 wide black bars, so there are 10 - 7 = 3 narrow black bars.",
-        ),
-        # Practice .3: 15 total bars -> 8 black, 7 white. White is 1 more than wide black -> wide = 6, narrow = 8 - 6 = 2 (Answer: B)
-        (
-            15, 1,
-            ["1", "2", "3", "4", "5"],
-            1,
-            "A ticket bar code has 15 alternating black and white bars, where the first and last bars are black. "
-            "The number of white bars is 1 more than the number of wide black bars. "
-            "How many narrow black bars are there?",
-            "Among 15 alternating bars starting and ending with black, 8 are black and 7 are white. "
-            "The number of wide black bars is 7 - 1 = 6, leaving 8 - 6 = 2 narrow black bars.",
-        ),
-        # Practice .4: 25 total bars -> 13 black, 12 white. White is 5 more than wide black -> wide = 7, narrow = 13 - 7 = 6 (Answer: D)
-        (
-            25, 5,
-            ["3", "4", "5", "6", "7"],
-            3,
-            "A package bar code uses 25 alternating black and white bars (the first and last bars are black). "
-            "The number of white bars is 5 more than the number of wide black bars. "
-            "How many narrow black bars does the bar code have?",
-            "Out of 25 alternating bars starting and ending with black, there are 13 black bars and 12 white bars. "
-            "There are 12 - 5 = 7 wide black bars, which leaves 13 - 7 = 6 narrow black bars.",
-        ),
-    ]
-
-    for idx, (t_bars, diff_w, opts, ans_idx, text, expl) in enumerate(practices[:num_practice], start=1):
-        check_barcode(t_bars, diff_w, opts, ans_idx)
+    rng = random.Random(seed)
+    modes = [0, 1, 2]
+    rng.shuffle(modes)
+    for idx in range(1, num_practice + 1):
+        m = modes[(idx - 1) % len(modes)]
+        t_bars, diff_w, opts, ans_idx, query, l_pat, r_pat, text, expl = _generate_dynamic_barcode_problem(rng, mode=m)
+        check_barcode(t_bars, diff_w, opts, ans_idx, query=query)
         d.problem(
             f"Practice {set_num}.{idx}",
             text,
-            fig_barcode(),
+            fig_barcode(l_pat, r_pat),
             "right",
             opts,
         )
         key.append((f"{set_num}.{idx}", LETTERS[ans_idx], expl))
 
+
 GENERATE = q_2003_17
 
 if __name__ == "__main__":
-    import inspect
-    collector = _ProblemCollector()
-    key = []
-    sig = inspect.signature(GENERATE)
-    if "num_practice" in sig.parameters:
-        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5)
-    else:
-        GENERATE(collector, key, set_num=1, include_orig=True)
-    assert len(collector.problems) == len(key)
-    print(f"Verified {QUESTION_ID} (model={MODEL}): {len(collector.problems)} problems generated.")
+    for test_seed in range(30):
+        collector = _ProblemCollector()
+        key = []
+        GENERATE(collector, key, set_num=1, include_orig=True, num_practice=5, seed=test_seed)
+        assert len(collector.problems) == len(key) == 6
+    print(f"Verified {QUESTION_ID} (model={MODEL}, reviewed={REVIEWED_BY}, dynamic={DYNAMIC}) across 30 random seeds!")

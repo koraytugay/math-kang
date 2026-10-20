@@ -161,7 +161,7 @@ The following 33 question generators are currently implemented in `question-gene
 | `(2003, 12)` | `question-generator/2003-12.py` | `argon` (reviewed high effort, dynamic) | `q_2003_12` | 2D paper net of a house folded into 3D isometric houses A–E |
 | `(2003, 14)` | `question-generator/2003-14.py` | `argon` (reviewed high effort, dynamic) | `q_2003_14` | Area of block letters (N, Z, V, M) on a 1 cm square grid |
 | `(2003, 16)` | `question-generator/2003-16.py` | `argon` (reviewed high effort, dynamic) | `q_2003_16` | Total pages in a book from total digits used for page numbers |
-| `(2003, 17)` | `question-generator/2003-17.py` | `argon` | `q_2003_17` | Alternating black and white barcode — wide vs. narrow black bars |
+| `(2003, 17)` | `question-generator/2003-17.py` | `argon` (reviewed high effort, dynamic) | `q_2003_17` | Alternating black and white barcode — wide vs. narrow black bars |
 | `(2003, 18)` | `question-generator/2003-18.py` | `argon` | `q_2003_18` | Covering an empty shape on a square grid using two polyomino pieces |
 | `(2007, 1)` | `question-generator/2007-1.py` | `argon` | `q_2007_1` | Forking road diagram — choosing one number/letter per road split |
 | `(2007, 3)` | `question-generator/2007-3.py` | `argon` | `q_2007_3` | Counting common letters shared by two words |
